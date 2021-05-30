@@ -584,10 +584,10 @@ export default class GameOfLife extends Component {
             value={this.state.pixleColor}
             onChange={e => {
               this.setState({ pixleColor: e.target.value, isRandomColor: false });
-              const pixels = document.querySelectorAll('[data-live=true]');
-              pixels.forEach(el => {
-                el.style.backgroundColor = e.target.value;
-              });
+              // const pixels = document.querySelectorAll('[data-live=true]');
+              // pixels.forEach(el => {
+              //   el.style.backgroundColor = e.target.value;
+              // });
               localStorage.setItem('pixleColor', e.target.value);
             }}
           ></input>
