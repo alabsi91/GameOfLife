@@ -159,6 +159,7 @@ export default class GameOfLife extends Component {
       });
       // eslint-disable-next-line no-loop-func
       element.addEventListener('mousedown', e => {
+        this.setState({isPaused: false})
         undo.push([]);
         redo = [];
         if (!this.state.isPlaying && !this.state.eraser) {
@@ -276,7 +277,7 @@ export default class GameOfLife extends Component {
     undo.push([]);
     const pixels = document.querySelectorAll('.lifeDeathPixels[data-live=true]');
     pixels.forEach(e => this.toDeath(e));
-    this.setState({ isPlaying: false });
+    this.setState({ isPlaying: false, isPaused: false });
   };
 
   pauseRender = () => {
@@ -286,7 +287,7 @@ export default class GameOfLife extends Component {
 
   renderLast = () => {
     clearInterval(interval);
-    this.setState({ isPlaying: false });
+    this.setState({ isPlaying: false, isPaused: false });
     if (lastPaint) {
       if (lastPaintGrid > this.state.gridWidth) {
         alert(`can't retrive last paint, current grid size is smaller than ${lastPaintGrid}`);
