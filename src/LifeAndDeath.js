@@ -1,3 +1,4 @@
+import html2canvas from 'html2canvas';
 import React, { Component } from 'react';
 import { pattrens } from './pattrens';
 
@@ -159,7 +160,7 @@ export default class GameOfLife extends Component {
       });
       // eslint-disable-next-line no-loop-func
       element.addEventListener('mousedown', e => {
-        this.setState({isPaused: false})
+        this.setState({ isPaused: false });
         undo.push([]);
         redo = [];
         if (!this.state.isPlaying && !this.state.eraser) {
@@ -315,6 +316,19 @@ export default class GameOfLife extends Component {
     grabEl.style.left = `${l.clientX}px`;
   };
 
+  copyToClipBoard = () => {
+    html2canvas(document.querySelector('#lifeDeathContainer')).then(canvas => {
+      canvas.toBlob(e => {
+        navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
+          if (result.state === 'granted' || result.state === 'prompt') {
+            // eslint-disable-next-line no-undef
+            navigator.clipboard.write([new ClipboardItem({ 'image/png': e })]);
+          }
+        });
+      }, 'image/png');
+    });
+  };
+
   render() {
     return (
       <>
@@ -362,7 +376,17 @@ export default class GameOfLife extends Component {
               </svg>
             </button>
           </div>
+          <button
+            className='buttons'
+            title={'Copy drawing to Clipboard'}
+            onClick={!this.state.isPlaying ? this.copyToClipBoard : ''}
+          >
+            <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
+              <path d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z' />
+            </svg>
+          </button>
           <div className='devider'></div>
+
           <button
             className='buttons'
             title={this.state.isPlaying ? 'Pause' : 'play'}
