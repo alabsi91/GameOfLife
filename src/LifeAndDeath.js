@@ -431,22 +431,24 @@ export default class GameOfLife extends Component {
             accept='.png,.jpg'
             onChange={() => {
               const selectedFile = document.getElementById('getImage').files[0];
-              const reader = new FileReader();
-              const imgTag = document.getElementById('img');
-              imgTag.removeAttribute('style');
-              reader.onload = e => {
-                imgTag.src = e.target.result;
-                setTimeout(() => {
-                  if (imgTag.getBoundingClientRect().width + 100 >= window.innerWidth) {
-                    imgTag.style.width = window.innerWidth - 100 + 'px';
-                  } else if (imgTag.getBoundingClientRect().height + 100 >= window.innerHeight) {
-                    imgTag.style.height = window.innerHeight - 100 + 'px';
-                  }
-                }, 100);
+              if (selectedFile) {
+                const reader = new FileReader();
+                const imgTag = document.getElementById('img');
+                imgTag.removeAttribute('style');
+                reader.onload = e => {
+                  imgTag.src = e.target.result;
+                  setTimeout(() => {
+                    if (imgTag.getBoundingClientRect().width + 100 >= window.innerWidth) {
+                      imgTag.style.width = window.innerWidth - 100 + 'px';
+                    } else if (imgTag.getBoundingClientRect().height + 100 >= window.innerHeight) {
+                      imgTag.style.height = window.innerHeight - 100 + 'px';
+                    }
+                  }, 100);
 
-                document.getElementById('imageLayer').style.display = 'block';
-              };
-              reader.readAsDataURL(selectedFile);
+                  document.getElementById('imageLayer').style.display = 'block';
+                };
+                reader.readAsDataURL(selectedFile);
+              }
             }}
           ></input>
           <label id='getImageLabel' htmlFor='getImage' title='Add Image Layer'>
