@@ -323,6 +323,7 @@ export default class GameOfLife extends Component {
 
   grabPanel = l => {
     const grabEl = document.getElementById('controlPanel');
+    grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
     grabEl.style.top = `${l.clientY}px`;
     grabEl.style.left = `${l.clientX}px`;
   };
@@ -363,7 +364,12 @@ export default class GameOfLife extends Component {
         <div id='controlPanel'>
           <div
             id='grabPad'
-            onMouseDown={() => window.addEventListener('mousemove', this.grabPanel)}
+            onMouseDown={e => {
+              const el = document.getElementById('controlPanel');
+              windowLeft = el.getBoundingClientRect().left - e.pageX;
+              windowTop = el.getBoundingClientRect().top - e.pageY;
+              window.addEventListener('mousemove', this.grabPanel);
+            }}
             onMouseUp={() => window.removeEventListener('mousemove', this.grabPanel)}
           >
             <svg
@@ -426,7 +432,7 @@ export default class GameOfLife extends Component {
               reader.readAsDataURL(selectedFile);
             }}
           ></input>
-          <label id='getImageLabel' htmlFor='getImage'>
+          <label id='getImageLabel' htmlFor='getImage' title='Add Image Layer'>
             <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
               <path d='M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z' />
             </svg>

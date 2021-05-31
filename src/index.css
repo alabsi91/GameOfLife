@@ -43,17 +43,15 @@ p {
   background-color: #454545;
 }
 #imgOpacity {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   -webkit-appearance: none;
   appearance: none;
   height: 1px;
   padding: 1px;
   cursor: initial;
-  width: 50px;
-  text-align: right;
+  width: 70px;
   border: solid 1px #636363;
   border-radius: 2px;
-  color: #dddddd;
   background-color: #454545;
   pointer-events: initial;
   float: left;
@@ -163,7 +161,7 @@ img {
   align-items: center;
   width: 50px;
   background-color: #535353;
-  transform: translate(-25px, -10px);
+  /* transform: translate(-25px, -10px); */
   z-index: 5;
 }
 .inputNumber {
@@ -267,7 +265,6 @@ input[type='color']::-webkit-color-swatch {
   height: 20px;
   margin: 0px;
   margin-bottom: 3px;
-  cursor: move;
 }
 .devider {
   width: 100%;
