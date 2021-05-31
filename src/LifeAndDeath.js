@@ -12,6 +12,7 @@ let windowTop;
 let windowLeft;
 let lineTop;
 let lineLeft;
+let forResize;
 
 export default class GameOfLife extends Component {
   state = {
@@ -42,6 +43,7 @@ export default class GameOfLife extends Component {
         alert(`can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`);
       } else this.applyPattren(getLastPaint, getLastPaintGrid[0]);
     }
+    window.addEventListener('mouseup', () => window.removeEventListener('mousemove', this.imgResize));
     this.keyboardShourtcuts();
   }
 
@@ -358,6 +360,13 @@ export default class GameOfLife extends Component {
     });
   };
 
+  imgResize = e => {
+    e.preventDefault();
+    document.getElementById('img').style.width =
+      parseInt(forResize[0], 10) + (e.clientX - forResize[2] + e.clientY - forResize[3]) / 2 + 'px';
+    document.getElementById('img').style.height = 'auto';
+  };
+
   render() {
     return (
       <>
@@ -420,13 +429,21 @@ export default class GameOfLife extends Component {
             type='file'
             name='getImage'
             accept='.png,.jpg'
-            onChange={e => {
+            onChange={() => {
               const selectedFile = document.getElementById('getImage').files[0];
               const reader = new FileReader();
-              const imgTag = document.querySelectorAll('img')[0];
-              imgTag.title = selectedFile.name;
+              const imgTag = document.getElementById('img');
+              imgTag.removeAttribute('style');
               reader.onload = e => {
                 imgTag.src = e.target.result;
+                setTimeout(() => {
+                  if (imgTag.getBoundingClientRect().width + 100 >= window.innerWidth) {
+                    imgTag.style.width = window.innerWidth - 100 + 'px';
+                  } else if (imgTag.getBoundingClientRect().height + 100 >= window.innerHeight) {
+                    imgTag.style.height = window.innerHeight - 100 + 'px';
+                  }
+                }, 100);
+
                 document.getElementById('imageLayer').style.display = 'block';
               };
               reader.readAsDataURL(selectedFile);
@@ -558,7 +575,7 @@ export default class GameOfLife extends Component {
           <input
             className='inputNumber'
             type='number'
-            title='Grid Width'
+            title='How many squares per row'
             min='20'
             max='150'
             value={this.state.gridWidth}
@@ -576,7 +593,7 @@ export default class GameOfLife extends Component {
           <input
             className='inputNumber'
             type='number'
-            title='Grid Height'
+            title='How many squares per column'
             min='20'
             max='150'
             value={this.state.gridHeight}
@@ -595,7 +612,7 @@ export default class GameOfLife extends Component {
           <input
             className='inputNumber'
             type='number'
-            title='Pixel Size'
+            title='Square size in px'
             min='1'
             max='50'
             value={this.state.pixelSize}
@@ -609,23 +626,23 @@ export default class GameOfLife extends Component {
               localStorage.setItem('pixelSize', Number(e.target.value));
             }}
           ></input>
-          <p className='controlLabel'>Pixels Size</p>
+          <p className='controlLabel'>Square Size</p>
 
           <input
             className='inputNumber'
             type='number'
-            title='Between Pixels Space'
+            title='Between squares space in px'
             min='0'
             max='5'
-            step='0.1'
-            value={this.state.pixelSpace}
+            step='0.5'
+            value={this.state.pixelSpace * 2}
             onChange={e => {
-              this.setState({ pixelSpace: Number(e.target.value) });
+              this.setState({ pixelSpace: Number(e.target.value / 2) });
               const pixels = document.querySelectorAll('.lifeDeathPixels');
               pixels.forEach(el => {
-                el.style.margin = e.target.value + 'px';
+                el.style.margin = Number(e.target.value / 2) + 'px';
               });
-              localStorage.setItem('pixelSpace', Number(e.target.value));
+              localStorage.setItem('pixelSpace', Number(e.target.value / 2));
             }}
           ></input>
           <p className='controlLabel'>Grid Lines</p>
@@ -773,6 +790,35 @@ export default class GameOfLife extends Component {
             </button>
           </div>
           <img id='img' alt='imageLayer'></img>
+          <div id='imgResize'>
+            <svg
+              onMouseDown={e => {
+                forResize = [
+                  document.getElementById('img').getBoundingClientRect().width,
+                  document.getElementById('img').getBoundingClientRect().width,
+                  e.clientX,
+                  e.clientY,
+                ];
+                window.addEventListener('mousemove', this.imgResize);
+              }}
+              title='Resize'
+              version='1.1'
+              id='Capa_1'
+              xmlns='http://www.w3.org/2000/svg'
+              x='0px'
+              y='0px'
+              viewBox='0 0 301.604 301.604'
+              style={{ enableBackground: 'new 0 0 301.604 301.604' }}
+              xmlSpace='preserve'
+            >
+              <circle cx='40.802' cy='40.802' r='40.802' />
+              <circle cx='150.802' cy='40.802' r='40.802' />
+              <circle cx='260.802' cy='40.802' r='40.802' />
+              <circle cx='150.802' cy='150.802' r='40.802' />
+              <circle cx='260.802' cy='150.802' r='40.802' />
+              <circle cx='260.802' cy='260.802' r='40.802' />
+            </svg>
+          </div>
         </div>
 
         <div id='windowContainer'>
@@ -786,7 +832,9 @@ export default class GameOfLife extends Component {
             onMouseUp={() => window.removeEventListener('mousemove', this.grabGrid)}
           >
             <p>
-              {this.state.gridWidth} x {this.state.gridWidth} px / {this.state.gridWidth * this.state.gridWidth} pixels
+              {this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize)} x{' '}
+              {this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize)} px /{' '}
+              {this.state.gridWidth * this.state.gridHeight} squares
             </p>
           </div>
           <div

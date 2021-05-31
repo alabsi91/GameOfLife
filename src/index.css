@@ -16,10 +16,28 @@ p {
   top: 50px;
   border: solid 4px #535353;
   border-top: none;
+  border-bottom: none;
   margin: auto;
   z-index: 1;
   pointer-events: none;
   display: none;
+}
+#imgResize {
+  width: 100%;
+  height: 20px;
+  background-color: #535353;
+  pointer-events: initial;
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+}
+#imgResize svg {
+  cursor: nwse-resize;
+  fill: #d7d7d7;
+  width: 12px;
+  height: 12px;
+  float: right;
+  transform: rotate(90deg);
 }
 #layerHeader {
   width: 100%;
