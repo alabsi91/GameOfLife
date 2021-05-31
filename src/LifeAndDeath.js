@@ -589,7 +589,7 @@ export default class GameOfLife extends Component {
               undo = [];
             }}
           ></input>
-          <p className='controlLabel'>Grid Width</p>
+          <p className='controlLabel'>Per Row</p>
           <input
             className='inputNumber'
             type='number'
@@ -607,7 +607,7 @@ export default class GameOfLife extends Component {
               undo = [];
             }}
           ></input>
-          <p className='controlLabel'>Grid Height</p>
+          <p className='controlLabel'>Per Column</p>
 
           <input
             className='inputNumber'
