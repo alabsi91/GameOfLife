@@ -130,7 +130,7 @@ export default class GameOfLife extends Component {
       const findRow = ~~(i / this.state.gridWidth);
       const findMiddle = Math.floor(this.state.gridHeight / 2);
       const findDef = findMiddle - findRow;
-      const findOp = Number.isInteger(this.state.gridWidth / 2)
+      const findOp = Number.isInteger(this.state.gridHeight / 2)
         ? i + findDef * this.state.gridWidth * 2 - this.state.gridWidth
         : i + findDef * this.state.gridWidth * 2;
       const pixel = document.querySelectorAll(`.lifeDeathPixels[data-pos="${findOp}"]`)[0];
