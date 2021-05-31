@@ -8,6 +8,11 @@ let lastPaintGrid;
 let undo = [];
 let redo = [];
 
+let windowTop;
+let windowLeft;
+let lineTop;
+let lineLeft;
+
 export default class GameOfLife extends Component {
   state = {
     isPlaying: false,
@@ -18,8 +23,9 @@ export default class GameOfLife extends Component {
     symmetricalY: false,
     eraser: false,
     speed: localStorage.getItem('speed') ? Number(localStorage.getItem('speed')) : 100,
-    pixelSize: localStorage.getItem('pixelSize') ? Number(localStorage.getItem('pixelSize')) : 14,
-    gridWidth: localStorage.getItem('gridWidth') ? Number(localStorage.getItem('gridWidth')) : 61,
+    pixelSize: localStorage.getItem('pixelSize') ? Number(localStorage.getItem('pixelSize')) : 15,
+    gridWidth: localStorage.getItem('gridWidth') ? Number(localStorage.getItem('gridWidth')) : 90,
+    gridHeight: localStorage.getItem('gridHeight') ? Number(localStorage.getItem('gridHeight')) : 50,
     pixelSpace: localStorage.getItem('pixelSpace') ? Number(localStorage.getItem('pixelSpace')) : 0.5,
     pixleColor: localStorage.getItem('pixleColor') ? localStorage.getItem('pixleColor') : '#ffffff',
     betweenPixleColor: localStorage.getItem('betweenPixleColor') ? localStorage.getItem('betweenPixleColor') : '#282828',
@@ -28,13 +34,13 @@ export default class GameOfLife extends Component {
   };
 
   componentDidMount() {
-    this.appendDivs(this.state.gridWidth);
+    this.appendDivs(this.state.gridWidth, this.state.gridHeight);
     if (localStorage.getItem('lastPaint')) {
       const getLastPaint = JSON.parse(localStorage.getItem('lastPaint'));
-      const getLastPaintGrid = Number(localStorage.getItem('lastPaintGrid'));
-      if (getLastPaintGrid > this.state.gridWidth) {
-        alert(`can't retrive last paint, current grid size is smaller than ${getLastPaintGrid}`);
-      } else this.applyPattren(getLastPaint, getLastPaintGrid);
+      const getLastPaintGrid = JSON.parse(localStorage.getItem('lastPaintGrid'));
+      if (getLastPaintGrid[0] > this.state.gridWidth || getLastPaintGrid[1] > this.state.gridHeight) {
+        alert(`can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`);
+      } else this.applyPattren(getLastPaint, getLastPaintGrid[0]);
     }
     this.keyboardShourtcuts();
   }
@@ -42,10 +48,13 @@ export default class GameOfLife extends Component {
   keyboardShourtcuts = () => {
     window.addEventListener('keyup', e => {
       if (e.ctrlKey && e.key.toLowerCase() === 'z' && undo.length > 0 && !this.state.drwaMode) {
+        document.querySelectorAll('input[type="number"').forEach(e => e.blur());
         this.undo();
       } else if (e.ctrlKey && e.key.toLowerCase() === 'y' && redo.length > 0 && !this.state.drwaMode) {
+        document.querySelectorAll('input[type="number"').forEach(e => e.blur());
         this.redo();
       } else if (e.key.toLowerCase() === 'e' && !this.state.drwaMode) {
+        document.querySelectorAll('input[type="number"').forEach(e => e.blur());
         this.state.eraser ? this.setState({ eraser: false }) : this.setState({ eraser: true });
       }
     });
@@ -83,18 +92,18 @@ export default class GameOfLife extends Component {
     }
   };
 
-  applyPattren = (p, g, c1, c2) => {
+  applyPattren = (patren, pWidth, x, y) => {
     const pixels = document.querySelectorAll('.lifeDeathPixels');
     pixels.forEach(e => {
       e.style.backgroundColor = this.state.backgroundPixleColor;
       e.removeAttribute('data-live');
     });
-    const dif = this.state.gridWidth - g;
-    const moveC1 = c1 ? ~~(this.state.gridWidth / 2) - c1 : 0;
-    const moveC2 = c2 ? ~~this.state.gridWidth * (~~(this.state.gridWidth / 2) - c2) : 0;
-    const centre = moveC1 + moveC2;
-    p.forEach(e => {
-      let div = Math.floor(e / g) * dif;
+    const dif = this.state.gridWidth - pWidth;
+    const moveX = x ? ~~(this.state.gridWidth / 2) - x : 0;
+    const moveY = y ? ~~this.state.gridWidth * (~~(this.state.gridHeight / 2) - y) : 0;
+    const centre = moveX + moveY;
+    patren.forEach(e => {
+      let div = Math.floor(e / pWidth) * dif;
       this.state.isRandomColor
         ? (pixels[e + div + centre].style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 40%, 1)`)
         : (pixels[e + div + centre].style.backgroundColor = this.state.pixleColor);
@@ -119,7 +128,7 @@ export default class GameOfLife extends Component {
   symmetricalY = (i, eraser) => {
     if (this.state.symmetricalY) {
       const findRow = ~~(i / this.state.gridWidth);
-      const findMiddle = Math.floor(this.state.gridWidth / 2);
+      const findMiddle = Math.floor(this.state.gridHeight / 2);
       const findDef = findMiddle - findRow;
       const findOp = Number.isInteger(this.state.gridWidth / 2)
         ? i + findDef * this.state.gridWidth * 2 - this.state.gridWidth
@@ -134,9 +143,9 @@ export default class GameOfLife extends Component {
     }
   };
 
-  appendDivs = grid => {
+  appendDivs = (grid, height) => {
     const container = document.getElementById('lifeDeathContainer');
-    for (let i = 0; i < Math.pow(grid, 2); i++) {
+    for (let i = 0; i < grid * height; i++) {
       const element = document.createElement('div');
       element.className = 'lifeDeathPixels';
       element.dataset.pos = i;
@@ -235,21 +244,21 @@ export default class GameOfLife extends Component {
   };
 
   play = () => {
-    this.setState({ isPlaying: true });
-    const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
     if (!this.state.isPlaying) {
+      this.setState({ isPlaying: true });
+      const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
       if (!this.state.isPaused) {
         const getDraw = [];
         pixels.forEach(e => getDraw.push(Number(e.dataset.pos)));
         lastPaint = getDraw;
-        lastPaintGrid = this.state.gridWidth;
+        lastPaintGrid = [this.state.gridWidth, this.state.gridHeight];
         localStorage.setItem('lastPaint', JSON.stringify(getDraw));
-        localStorage.setItem('lastPaintGrid', this.state.gridWidth);
+        localStorage.setItem('lastPaintGrid', JSON.stringify(lastPaintGrid));
       }
       interval = setInterval(() => {
         this.renderLifeDeath();
       }, this.state.speed);
-    }
+    } else this.pauseRender();
   };
 
   renderLifeDeath = () => {
@@ -282,32 +291,34 @@ export default class GameOfLife extends Component {
   };
 
   pauseRender = () => {
-    clearInterval(interval);
-    this.setState({ isPlaying: false, isPaused: true });
+    if (this.state.isPlaying) {
+      clearInterval(interval);
+      this.setState({ isPlaying: false, isPaused: true });
+    }
   };
 
   renderLast = () => {
     clearInterval(interval);
     this.setState({ isPlaying: false, isPaused: false });
     if (lastPaint) {
-      if (lastPaintGrid > this.state.gridWidth) {
-        alert(`can't retrive last paint, current grid size is smaller than ${lastPaintGrid}`);
-      } else if (lastPaintGrid !== this.state.gridWidth) {
-        alert(`this paint was painted orginaly on ${lastPaintGrid} grid`);
-        this.applyPattren(lastPaint, lastPaintGrid);
-      } else this.applyPattren(lastPaint, lastPaintGrid);
+      if (lastPaintGrid[0] > this.state.gridWidth || lastPaintGrid[1] > this.state.gridHeight) {
+        alert(`can't retrive last paint, current grid size is smaller than ${lastPaintGrid[0]}x${lastPaintGrid[1]}`);
+      } else if (lastPaintGrid[0] !== this.state.gridWidth || lastPaintGrid[1] !== this.state.gridHeight) {
+        alert(`this paint was painted orginaly on ${lastPaintGrid[0]}x${lastPaintGrid[1]} grid`);
+        this.applyPattren(lastPaint, lastPaintGrid[0]);
+      } else this.applyPattren(lastPaint, lastPaintGrid[0]);
     } else if (localStorage.getItem('lastPaint')) {
       const getLastPaint = JSON.parse(localStorage.getItem('lastPaint'));
-      const getLastPaintGrid = Number(localStorage.getItem('lastPaintGrid'));
-      if (getLastPaintGrid > this.state.gridWidth) {
-        alert(`can't retrive last paint, current grid size is smaller than ${getLastPaintGrid}`);
-      } else this.applyPattren(getLastPaint, getLastPaintGrid);
+      const getLastPaintGrid = JSON.parse(localStorage.getItem('lastPaintGrid'));
+      if (getLastPaintGrid[0] > this.state.gridWidth || getLastPaintGrid[1] > this.state.gridHeight) {
+        alert(`can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`);
+      } else this.applyPattren(getLastPaint, getLastPaintGrid[0]);
     } else alert('Last Paint Not found');
   };
 
   trackMouse = l => {
-    document.getElementById('MouseHorizenLine').style.top = `${l.clientY}px`;
-    document.getElementById('MouseverticalLine').style.left = `${l.clientX}px`;
+    document.getElementById('MouseHorizenLine').style.top = `${l.clientY - lineTop}px`;
+    document.getElementById('MouseVerticalLine').style.left = `${l.clientX - lineLeft}px`;
   };
 
   grabPanel = l => {
@@ -316,7 +327,24 @@ export default class GameOfLife extends Component {
     grabEl.style.left = `${l.clientX}px`;
   };
 
+  grabGrid = l => {
+    l.preventDefault();
+    const grabEl = document.getElementById('windowContainer');
+    grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
+    grabEl.style.top = `${l.clientY}px`;
+    grabEl.style.left = `${l.clientX}px`;
+  };
+
+  grabLayer = l => {
+    l.preventDefault();
+    const grabEl = document.getElementById('imageLayer');
+    grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
+    grabEl.style.top = `${l.clientY}px`;
+    grabEl.style.left = `${l.clientX}px`;
+  };
+
   copyToClipBoard = () => {
+    this.pauseRender();
     html2canvas(document.querySelector('#lifeDeathContainer')).then(canvas => {
       canvas.toBlob(e => {
         navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
@@ -335,8 +363,8 @@ export default class GameOfLife extends Component {
         <div id='controlPanel'>
           <div
             id='grabPad'
-            onMouseDown={e => window.addEventListener('mousemove', this.grabPanel)}
-            onMouseUp={e => window.removeEventListener('mousemove', this.grabPanel)}
+            onMouseDown={() => window.addEventListener('mousemove', this.grabPanel)}
+            onMouseUp={() => window.removeEventListener('mousemove', this.grabPanel)}
           >
             <svg
               xmlns='http://www.w3.org/2000/svg'
@@ -376,21 +404,39 @@ export default class GameOfLife extends Component {
               </svg>
             </button>
           </div>
-          <button
-            className='buttons'
-            title={'Copy drawing to Clipboard'}
-            onClick={!this.state.isPlaying ? this.copyToClipBoard : ''}
-          >
+          <button className='buttons' title='Copy drawing to Clipboard' onClick={this.copyToClipBoard}>
             <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
               <path d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z' />
             </svg>
           </button>
+          <input
+            id='getImage'
+            type='file'
+            name='getImage'
+            accept='.png,.jpg'
+            onChange={e => {
+              const selectedFile = document.getElementById('getImage').files[0];
+              const reader = new FileReader();
+              const imgTag = document.querySelectorAll('img')[0];
+              imgTag.title = selectedFile.name;
+              reader.onload = e => {
+                imgTag.src = e.target.result;
+                document.getElementById('imageLayer').style.display = 'block';
+              };
+              reader.readAsDataURL(selectedFile);
+            }}
+          ></input>
+          <label id='getImageLabel' htmlFor='getImage'>
+            <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
+              <path d='M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z' />
+            </svg>
+          </label>
           <div className='devider'></div>
 
           <button
             className='buttons'
             title={this.state.isPlaying ? 'Pause' : 'play'}
-            onClick={this.state.isPlaying ? this.pauseRender : this.play}
+            onClick={this.play}
             style={{
               backgroundColor: this.state.isPlaying ? '#383838' : 'initial',
               border: this.state.isPlaying ? 'solid 1px #636363' : 'none',
@@ -506,28 +552,46 @@ export default class GameOfLife extends Component {
           <input
             className='inputNumber'
             type='number'
-            title='Grid Size'
+            title='Grid Width'
             min='20'
-            max='100'
+            max='150'
             value={this.state.gridWidth}
             disabled={this.state.isPlaying}
             onChange={e => {
               this.setState({ gridWidth: Number(e.target.value) });
               const pixels = document.querySelectorAll('.lifeDeathPixels');
               pixels.forEach(el => el.remove());
-              this.appendDivs(Number(e.target.value));
+              this.appendDivs(Number(e.target.value), this.state.gridHeight);
               localStorage.setItem('gridWidth', Number(e.target.value));
               undo = [];
             }}
           ></input>
-          <p className='controlLabel'>Grid Size</p>
+          <p className='controlLabel'>Grid Width</p>
+          <input
+            className='inputNumber'
+            type='number'
+            title='Grid Height'
+            min='20'
+            max='150'
+            value={this.state.gridHeight}
+            disabled={this.state.isPlaying}
+            onChange={e => {
+              this.setState({ gridHeight: Number(e.target.value) });
+              const pixels = document.querySelectorAll('.lifeDeathPixels');
+              pixels.forEach(el => el.remove());
+              this.appendDivs(this.state.gridWidth, Number(e.target.value));
+              localStorage.setItem('gridHeight', Number(e.target.value));
+              undo = [];
+            }}
+          ></input>
+          <p className='controlLabel'>Grid Height</p>
 
           <input
             className='inputNumber'
             type='number'
             title='Pixel Size'
             min='1'
-            max='20'
+            max='50'
             value={this.state.pixelSize}
             onChange={e => {
               this.setState({ pixelSize: Number(e.target.value) });
@@ -633,7 +697,7 @@ export default class GameOfLife extends Component {
             disabled={this.state.isPlaying}
             onChange={e => {
               const value = e.target.value;
-              if (this.state.gridWidth < 45) {
+              if (this.state.gridWidth < 45 || this.state.gridHeight < 45) {
                 alert('this patren requiers a 45x45 grid and greater');
               } else if (value === 'simkinGliderGun') {
                 this.applyPattren(pattrens[value], 60, 0, 1);
@@ -665,63 +729,114 @@ export default class GameOfLife extends Component {
           <p className='controlLabel'>Pattrens</p>
         </div>
 
-        <div
-          id='lifeDeathContainer'
-          style={{
-            width: this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize) + 'px',
-            height: this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize) + 'px',
-            backgroundColor: this.state.betweenPixleColor,
-          }}
-          onMouseDown={e => {
-            if (!this.state.isPlaying) this.setState({ drwaMode: true });
-            document.querySelectorAll('#controlPanel > *').forEach(e => e.blur());
-            e.preventDefault();
-          }}
-          onMouseUp={() => {
-            this.setState({ drwaMode: false });
-          }}
-          onMouseLeave={() => {
-            this.setState({ drwaMode: false });
-            document.getElementById('MouseHorizenLine').style.display = 'none';
-            document.getElementById('MouseverticalLine').style.display = 'none';
-            window.removeEventListener('mousemove', this.trackMouse);
-          }}
-          onMouseEnter={e => {
-            if (!this.state.isPlaying) {
-              document.getElementById('MouseHorizenLine').style.display = 'block';
-              document.getElementById('MouseverticalLine').style.display = 'block';
-              window.addEventListener('mousemove', this.trackMouse);
-            }
-          }}
-        >
-          <nav
-            id='horizenLine'
-            style={{
-              height:
-                this.state.gridWidth % 2 !== 0
-                  ? this.state.pixelSpace * 4 + this.state.pixelSize + 'px'
-                  : this.state.pixelSpace * 2,
-              backgroundColor: this.state.SymmetryLinesColor,
+        <div id='imageLayer'>
+          <div
+            id='layerHeader'
+            onMouseDown={e => {
+              windowLeft = e.target.getBoundingClientRect().left - e.pageX;
+              windowTop = e.target.getBoundingClientRect().top - e.pageY;
+              window.addEventListener('mousemove', this.grabLayer);
             }}
-          ></nav>
-          <nav
-            id='verticalLine'
-            style={{
-              width:
-                this.state.gridWidth % 2 !== 0
-                  ? this.state.pixelSpace * 4 + this.state.pixelSize + 'px'
-                  : this.state.pixelSpace * 2,
-              backgroundColor: this.state.SymmetryLinesColor,
+            onMouseUp={() => window.removeEventListener('mousemove', this.grabLayer)}
+          >
+            <input
+              type='range'
+              id='imgOpacity'
+              step='0.1'
+              min='0.1'
+              max='1'
+              defaultValue='0.5'
+              onMouseDown={e => {
+                e.stopPropagation();
+                return false;
+              }}
+              onChange={e => {
+                document.getElementById('img').style.opacity = e.target.value;
+              }}
+            ></input>
+            <button
+              id='closeImg'
+              onClick={() => {
+                document.getElementById('imageLayer').style.display = 'none';
+                document.getElementById('getImage').value = '';
+              }}
+            >
+              <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
+                <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
+              </svg>
+            </button>
+          </div>
+          <img id='img' alt='imageLayer'></img>
+        </div>
+
+        <div id='windowContainer'>
+          <div
+            id='windowHeader'
+            onMouseDown={e => {
+              windowLeft = e.target.getBoundingClientRect().left - e.pageX;
+              windowTop = e.target.getBoundingClientRect().top - e.pageY;
+              window.addEventListener('mousemove', this.grabGrid);
             }}
-          ></nav>
-          <nav
-            id='MouseHorizenLine'
-            style={{ width: this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize) + 'px' }}
-          ></nav>
-          <nav
-            id='MouseverticalLine'
-            style={{ height: this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize) + 'px' }}
-          ></nav>
+            onMouseUp={() => window.removeEventListener('mousemove', this.grabGrid)}
+          >
+            <p>
+              {this.state.gridWidth} x {this.state.gridWidth} px / {this.state.gridWidth * this.state.gridWidth} pixels
+            </p>
+          </div>
+          <div
+            id='lifeDeathContainer'
+            style={{
+              width: this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize) + 'px',
+              height: this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize) + 'px',
+              backgroundColor: this.state.betweenPixleColor,
+            }}
+            onMouseDown={e => {
+              if (!this.state.isPlaying) this.setState({ drwaMode: true });
+              document.querySelectorAll('#controlPanel > *').forEach(e => e.blur());
+              e.preventDefault();
+            }}
+            onMouseUp={() => {
+              this.setState({ drwaMode: false });
+            }}
+            onMouseLeave={() => {
+              this.setState({ drwaMode: false });
+              document.getElementById('MouseHorizenLine').style.display = 'none';
+              document.getElementById('MouseVerticalLine').style.display = 'none';
+              window.removeEventListener('mousemove', this.trackMouse);
+            }}
+            onMouseEnter={e => {
+              if (!this.state.isPlaying) {
+                lineTop = e.target.getBoundingClientRect().top;
+                lineLeft = e.target.getBoundingClientRect().left;
+                document.getElementById('MouseHorizenLine').style.display = 'block';
+                document.getElementById('MouseVerticalLine').style.display = 'block';
+                window.addEventListener('mousemove', this.trackMouse);
+              }
+            }}
+          >
+            <nav
+              id='horizenLine'
+              style={{
+                height:
+                  this.state.gridHeight % 2 !== 0
+                    ? this.state.pixelSpace * 4 + this.state.pixelSize + 'px'
+                    : this.state.pixelSpace * 2,
+                backgroundColor: this.state.SymmetryLinesColor,
+              }}
+            ></nav>
+            <nav
+              id='verticalLine'
+              style={{
+                width:
+                  this.state.gridWidth % 2 !== 0
+                    ? this.state.pixelSpace * 4 + this.state.pixelSize + 'px'
+                    : this.state.pixelSpace * 2,
+                backgroundColor: this.state.SymmetryLinesColor,
+              }}
+            ></nav>
+            <nav id='MouseHorizenLine'></nav>
+            <nav id='MouseVerticalLine'></nav>
+          </div>
         </div>
       </>
     );
