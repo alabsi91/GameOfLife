@@ -332,7 +332,7 @@ export default class GameOfLife extends Component {
   grabPanel = l => {
     const grabEl = document.getElementById('controlPanel');
     grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
-    grabEl.style.top = `${l.pageY}px`;
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY}px`;
     grabEl.style.left = `${l.pageX}px`;
   };
 
@@ -340,7 +340,7 @@ export default class GameOfLife extends Component {
     l.preventDefault();
     const grabEl = document.getElementById('windowContainer');
     grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
-    grabEl.style.top = `${l.pageY}px`;
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY}px`;
     grabEl.style.left = `${l.pageX}px`;
   };
 
@@ -348,7 +348,7 @@ export default class GameOfLife extends Component {
     l.preventDefault();
     const grabEl = document.getElementById('imageLayer');
     grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
-    grabEl.style.top = `${l.pageY}px`;
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY}px`;
     grabEl.style.left = `${l.pageX}px`;
   };
 
