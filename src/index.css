@@ -115,14 +115,14 @@ img {
 }
 #lifeDeathContainer {
   position: relative;
-  flex-wrap: wrap;
-  display: inline-flex;
-  text-align: center;
+  line-height: 0px;
   cursor: crosshair;
   z-index: 1;
 }
 .lifeDeathPixels {
   background-color: black;
+  display: inline-block;
+  box-sizing: border-box;
 }
 #horizenLine {
   width: 100%;

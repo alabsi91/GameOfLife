@@ -360,7 +360,7 @@ export default class GameOfLife extends Component {
 
   copyToClipBoard = () => {
     this.pauseRender();
-    html2canvas(document.querySelector('#lifeDeathContainer'), {scale: 2}).then(canvas => {
+    html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 2 }).then(canvas => {
       canvas.toBlob(e => {
         navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
           if (result.state === 'granted' || result.state === 'prompt') {
