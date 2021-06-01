@@ -1,19 +1,11 @@
 import html2canvas from 'html2canvas';
 import React, { Component } from 'react';
 import { pattrens } from './pattrens';
+import { saveAs } from 'file-saver';
 
-let interval;
-let lastPaint;
-let lastPaintColors;
-let lastPaintGrid;
+let interval, lastPaint, lastPaintColors, lastPaintGrid, windowTop, windowLeft, lineTop, lineLeft, forResize;
 let undo = [];
 let redo = [];
-
-let windowTop;
-let windowLeft;
-let lineTop;
-let lineLeft;
-let forResize;
 
 export default class GameOfLife extends Component {
   state = {
@@ -62,6 +54,8 @@ export default class GameOfLife extends Component {
       } else if (e.ctrlKey && e.key.toLowerCase() === 'y' && redo.length > 0 && !this.state.drwaMode) {
         document.querySelectorAll('input[type="number"').forEach(e => e.blur());
         this.redo();
+      } else if (e.key.toLowerCase() === 'q') {
+        this.downloadImg();
       } else if (e.key.toLowerCase() === 'e' && !this.state.drwaMode) {
         document.querySelectorAll('input[type="number"').forEach(e => e.blur());
         this.state.eraser ? this.setState({ eraser: false }) : this.setState({ eraser: true });
@@ -372,6 +366,15 @@ export default class GameOfLife extends Component {
     });
   };
 
+  downloadImg = () => {
+    this.pauseRender();
+    html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 2 }).then(canvas => {
+      canvas.toBlob(e => {
+        saveAs(e, 'Game of life ' + Date.now());
+      }, 'image/png');
+    });
+  };
+
   imgResize = e => {
     e.preventDefault();
     document.getElementById('img').style.width =
@@ -404,7 +407,7 @@ export default class GameOfLife extends Component {
             </svg>
           </div>
           <div className='devider'></div>
-          <div id='undoredoContainer'>
+          <div className='twoButtonsContainer'>
             <button onClick={this.undo} title='undo (Ctrl + z)'>
               <svg
                 xmlns='http://www.w3.org/2000/svg'
@@ -430,43 +433,20 @@ export default class GameOfLife extends Component {
               </svg>
             </button>
           </div>
-          <button className='buttons' title='Copy drawing to Clipboard' onClick={this.copyToClipBoard}>
-            <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
-              <path d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z' />
-            </svg>
-          </button>
-          <input
-            id='getImage'
-            type='file'
-            name='getImage'
-            accept='.png,.jpg'
-            onChange={() => {
-              const selectedFile = document.getElementById('getImage').files[0];
-              if (selectedFile) {
-                const reader = new FileReader();
-                const imgTag = document.getElementById('img');
-                imgTag.removeAttribute('style');
-                reader.onload = e => {
-                  imgTag.src = e.target.result;
-                  setTimeout(() => {
-                    if (imgTag.getBoundingClientRect().width + 100 >= window.innerWidth) {
-                      imgTag.style.width = window.innerWidth - 100 + 'px';
-                    } else if (imgTag.getBoundingClientRect().height + 100 >= window.innerHeight) {
-                      imgTag.style.height = window.innerHeight - 100 + 'px';
-                    }
-                  }, 100);
 
-                  document.getElementById('imageLayer').style.display = 'block';
-                };
-                reader.readAsDataURL(selectedFile);
-              }
-            }}
-          ></input>
-          <label id='getImageLabel' htmlFor='getImage' title='Add Image Layer'>
-            <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
-              <path d='M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z' />
-            </svg>
-          </label>
+          <div className='devider'></div>
+          <div className='twoButtonsContainer'>
+            <button title='Copy drawing to Clipboard' onClick={this.copyToClipBoard}>
+              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
+                <path d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z' />
+              </svg>
+            </button>
+            <button title='Download drawing' onClick={this.downloadImg}>
+              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
+                <path d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z' />{' '}
+              </svg>
+            </button>
+          </div>
           <div className='devider'></div>
 
           <button
@@ -528,7 +508,15 @@ export default class GameOfLife extends Component {
             title='Eraser (e)'
             onClick={() => (this.state.eraser ? this.setState({ eraser: false }) : this.setState({ eraser: true }))}
           >
-            <svg width='24' height='24' xmlns='http://www.w3.org/2000/svg' fillRule='evenodd' clipRule='evenodd' fill='#D7D7D7'>
+            <svg
+              viewBox='0 0 24 24'
+              width='24'
+              height='24'
+              xmlns='http://www.w3.org/2000/svg'
+              fillRule='evenodd'
+              clipRule='evenodd'
+              fill='#D7D7D7'
+            >
               <path d='M5.662 23l-5.369-5.365c-.195-.195-.293-.45-.293-.707 0-.256.098-.512.293-.707l14.929-14.928c.195-.194.451-.293.707-.293.255 0 .512.099.707.293l7.071 7.073c.196.195.293.451.293.708 0 .256-.097.511-.293.707l-11.216 11.219h5.514v2h-12.343zm3.657-2l-5.486-5.486-1.419 1.414 4.076 4.072h2.829zm.456-11.429l-4.528 4.528 5.658 5.659 4.527-4.53-5.657-5.657z' />
             </svg>
           </button>
@@ -564,6 +552,38 @@ export default class GameOfLife extends Component {
               <path d='M3 21h2v-2H3v2zM5 7H3v2h2V7zM3 17h2v-2H3v2zm4 4h2v-2H7v2zM5 3H3v2h2V3zm4 0H7v2h2V3zm8 0h-2v2h2V3zm-4 4h-2v2h2V7zm0-4h-2v2h2V3zm6 14h2v-2h-2v2zm-8 4h2v-2h-2v2zm-8-8h18v-2H3v2zM19 3v2h2V3h-2zm0 6h2V7h-2v2zm-8 8h2v-2h-2v2zm4 4h2v-2h-2v2zm4 0h2v-2h-2v2z' />
             </svg>
           </button>
+          <input
+            id='getImage'
+            type='file'
+            name='getImage'
+            accept='.png,.jpg'
+            onChange={() => {
+              const selectedFile = document.getElementById('getImage').files[0];
+              if (selectedFile) {
+                const reader = new FileReader();
+                const imgTag = document.getElementById('img');
+                imgTag.removeAttribute('style');
+                reader.onload = e => {
+                  imgTag.src = e.target.result;
+                  setTimeout(() => {
+                    if (imgTag.getBoundingClientRect().width + 100 >= window.innerWidth) {
+                      imgTag.style.width = window.innerWidth - 100 + 'px';
+                    } else if (imgTag.getBoundingClientRect().height + 100 >= window.innerHeight) {
+                      imgTag.style.height = window.innerHeight - 100 + 'px';
+                    }
+                  }, 100);
+
+                  document.getElementById('imageLayer').style.display = 'block';
+                };
+                reader.readAsDataURL(selectedFile);
+              }
+            }}
+          ></input>
+          <label id='getImageLabel' className='buttons' htmlFor='getImage' title='Add Image Layer'>
+            <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
+              <path d='M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z' />
+            </svg>
+          </label>
 
           <div className='devider'></div>
 

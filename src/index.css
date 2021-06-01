@@ -224,9 +224,9 @@ input[type='color']::-webkit-color-swatch {
   border-radius: 12px;
 }
 .buttons {
-  width: 80%;
+  width: 70%;
   padding: 0px;
-  height: 40px;
+  height: 35px;
   border-radius: 2px;
   border: none;
   font-weight: 200;
@@ -237,6 +237,10 @@ input[type='color']::-webkit-color-swatch {
 .buttons:hover {
   background-color: #454545 !important;
   border: solid 1px #636363 !important;
+}
+.buttons svg {
+  width: 22px;
+  height: 22px;
 }
 .randomColors {
   width: 70%;
@@ -303,30 +307,29 @@ input[type='color']::-webkit-color-swatch {
   margin-top: 0px;
   font-family: system-ui;
 }
-#undoredoContainer {
+.twoButtonsContainer {
   display: flex;
-  justify-content: space-evenly;
-  align-content: stretch;
-  align-items: center;
-  flex-wrap: nowrap;
-  flex-direction: row;
+  width: 100%;
+  justify-content: space-around;
 }
-#undoredoContainer button {
-  width: 50%;
-  padding: 0px;
-  margin: 0px 1px;
-  margin-bottom: 3px;
+.twoButtonsContainer button {
+  padding: 2px;
+  margin-bottom: 2px;
   height: 25px;
   border-radius: 2px;
-  border: solid 1px #636363;
+  border: none;
   font-weight: 200;
   font-size: 14px;
   background-color: initial;
   cursor: pointer;
+  box-sizing: border-box;
 }
-#undoredoContainer button:hover {
+.twoButtonsContainer button:hover {
   background-color: #454545 !important;
-  border: solid 1px #636363 !important;
+}
+.twoButtonsContainer button svg {
+  width: 18px;
+  height: 18px;
 }
 #getImage {
   width: 0.1px;
@@ -337,22 +340,9 @@ input[type='color']::-webkit-color-swatch {
   z-index: -1;
 }
 #getImageLabel {
+  margin-bottom: 7px;
   display: flex;
   align-items: center;
   justify-content: space-evenly;
-  width: 40px;
-  padding: 0px;
-  height: 40px;
-  border-radius: 2px;
-  border: none;
-  background-color: initial;
-  cursor: pointer;
   box-sizing: border-box;
-}
-#getImageLabel:hover {
-  background-color: #454545;
-  border: solid 1px #636363;
-}
-.konvajs-content {
-  margin: auto;
 }
