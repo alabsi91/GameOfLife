@@ -11,14 +11,14 @@ p {
   user-select: none;
 }
 #imageLayer {
-  position: fixed;
+  position: absolute;
   left: 30vw;
   top: 50px;
   border: solid 4px #535353;
   border-top: none;
   border-bottom: none;
   margin: auto;
-  z-index: 1;
+  z-index: 2;
   pointer-events: none;
   display: none;
   box-shadow: 0px 0px 3px 0px rgb(0 0 0 / 75%);
@@ -88,15 +88,16 @@ p {
 }
 img {
   opacity: 0.5;
+  margin-bottom: -4px;
 }
 #windowContainer {
-  position: fixed;
+  position: absolute;
   left: 100px;
   top: 50px;
   border: solid 4px #535353;
   border-top: none;
   margin: auto;
-  box-shadow: 0px 0px 3px 0px rgb(0 0 0 / 75%)
+  box-shadow: 0px 0px 3px 0px rgb(0 0 0 / 75%);
 }
 #windowHeader {
   width: 100%;
@@ -169,7 +170,7 @@ img {
   background-color: rgb(133, 133, 133) !important;
 }
 #controlPanel {
-  position: fixed;
+  position: absolute;
   top: 15px;
   left: 30px;
   border: solid 1px #424242;

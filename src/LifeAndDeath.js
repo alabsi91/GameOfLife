@@ -43,7 +43,12 @@ export default class GameOfLife extends Component {
         alert(`can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`);
       } else this.applyPattren(getLastPaint, getLastPaintGrid[0]);
     }
-    window.addEventListener('mouseup', () => window.removeEventListener('mousemove', this.imgResize));
+    window.addEventListener('mouseup', () => {
+      window.removeEventListener('mousemove', this.imgResize);
+      window.removeEventListener('mousemove', this.grabPanel);
+      window.removeEventListener('mousemove', this.grabLayer);
+      window.removeEventListener('mousemove', this.grabGrid);
+    });
     this.keyboardShourtcuts();
   }
 
@@ -326,24 +331,24 @@ export default class GameOfLife extends Component {
   grabPanel = l => {
     const grabEl = document.getElementById('controlPanel');
     grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
-    grabEl.style.top = `${l.clientY}px`;
-    grabEl.style.left = `${l.clientX}px`;
+    grabEl.style.top = `${l.pageY}px`;
+    grabEl.style.left = `${l.pageX}px`;
   };
 
   grabGrid = l => {
     l.preventDefault();
     const grabEl = document.getElementById('windowContainer');
     grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
-    grabEl.style.top = `${l.clientY}px`;
-    grabEl.style.left = `${l.clientX}px`;
+    grabEl.style.top = `${l.pageY}px`;
+    grabEl.style.left = `${l.pageX}px`;
   };
 
   grabLayer = l => {
     l.preventDefault();
     const grabEl = document.getElementById('imageLayer');
     grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
-    grabEl.style.top = `${l.clientY}px`;
-    grabEl.style.left = `${l.clientX}px`;
+    grabEl.style.top = `${l.pageY}px`;
+    grabEl.style.left = `${l.pageX}px`;
   };
 
   copyToClipBoard = () => {
@@ -375,11 +380,11 @@ export default class GameOfLife extends Component {
             id='grabPad'
             onMouseDown={e => {
               const el = document.getElementById('controlPanel');
-              windowLeft = el.getBoundingClientRect().left - e.pageX;
-              windowTop = el.getBoundingClientRect().top - e.pageY;
+              windowLeft = el.getBoundingClientRect().left - e.clientX;
+              windowTop = el.getBoundingClientRect().top - e.clientY;
               window.addEventListener('mousemove', this.grabPanel);
             }}
-            onMouseUp={() => window.removeEventListener('mousemove', this.grabPanel)}
+            // onMouseUp={() => window.removeEventListener('mousemove', this.grabPanel)}
           >
             <svg
               xmlns='http://www.w3.org/2000/svg'
@@ -738,10 +743,13 @@ export default class GameOfLife extends Component {
                 this.applyPattren(pattrens[value], 60, 0, 3);
               } else if (value === 'omarDrawing') {
                 this.applyPattren(pattrens[value], 60, 4, 2);
+              } else if (value === 'heart') {
+                this.applyPattren(pattrens[value], 60, 1, 2);
               } else if (value !== '---') this.applyPattren(pattrens[value], 60);
             }}
           >
             <option value='---'>---</option>
+            <option value='heart'>Heart</option>
             <option value='gliderGun'>Glider Gun</option>
             <option value='simkinGliderGun'>Simkin Glider Gun</option>
             <option value='LightWeightSpaceship'>Light Weight Spaceship</option>
@@ -758,11 +766,11 @@ export default class GameOfLife extends Component {
           <div
             id='layerHeader'
             onMouseDown={e => {
-              windowLeft = e.target.getBoundingClientRect().left - e.pageX;
-              windowTop = e.target.getBoundingClientRect().top - e.pageY;
+              windowLeft = e.target.getBoundingClientRect().left - e.clientX;
+              windowTop = e.target.getBoundingClientRect().top - e.clientY;
               window.addEventListener('mousemove', this.grabLayer);
             }}
-            onMouseUp={() => window.removeEventListener('mousemove', this.grabLayer)}
+            // onMouseUp={() => window.removeEventListener('mousemove', this.grabLayer)}
           >
             <input
               type='range'
@@ -827,11 +835,11 @@ export default class GameOfLife extends Component {
           <div
             id='windowHeader'
             onMouseDown={e => {
-              windowLeft = e.target.getBoundingClientRect().left - e.pageX;
-              windowTop = e.target.getBoundingClientRect().top - e.pageY;
+              windowLeft = e.target.getBoundingClientRect().left - e.clientX;
+              windowTop = e.target.getBoundingClientRect().top - e.clientY;
               window.addEventListener('mousemove', this.grabGrid);
             }}
-            onMouseUp={() => window.removeEventListener('mousemove', this.grabGrid)}
+            // onMouseUp={() => window.removeEventListener('mousemove', this.grabGrid)}
           >
             <p>
               {this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize)} x{' '}
