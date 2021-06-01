@@ -4,6 +4,7 @@ import { pattrens } from './pattrens';
 
 let interval;
 let lastPaint;
+let lastPaintColors;
 let lastPaintGrid;
 let undo = [];
 let redo = [];
@@ -38,10 +39,11 @@ export default class GameOfLife extends Component {
     this.appendDivs(this.state.gridWidth, this.state.gridHeight);
     if (localStorage.getItem('lastPaint')) {
       const getLastPaint = JSON.parse(localStorage.getItem('lastPaint'));
+      const getLastPaintColros = JSON.parse(localStorage.getItem('lastPaintColors'));
       const getLastPaintGrid = JSON.parse(localStorage.getItem('lastPaintGrid'));
       if (getLastPaintGrid[0] > this.state.gridWidth || getLastPaintGrid[1] > this.state.gridHeight) {
         alert(`can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`);
-      } else this.applyPattren(getLastPaint, getLastPaintGrid[0]);
+      } else this.applyPattren(getLastPaint, getLastPaintColros, getLastPaintGrid[0]);
     }
     window.addEventListener('mouseup', () => {
       window.removeEventListener('mousemove', this.imgResize);
@@ -99,7 +101,7 @@ export default class GameOfLife extends Component {
     }
   };
 
-  applyPattren = (patren, pWidth, x, y) => {
+  applyPattren = (patren, colors, pWidth, x, y) => {
     const pixels = document.querySelectorAll('.lifeDeathPixels');
     pixels.forEach(e => {
       e.style.backgroundColor = this.state.backgroundPixleColor;
@@ -109,11 +111,11 @@ export default class GameOfLife extends Component {
     const moveX = x ? ~~(this.state.gridWidth / 2) - x : 0;
     const moveY = y ? ~~this.state.gridWidth * (~~(this.state.gridHeight / 2) - y) : 0;
     const centre = moveX + moveY;
-    patren.forEach(e => {
+    patren.forEach((e, i) => {
       let div = Math.floor(e / pWidth) * dif;
       this.state.isRandomColor
         ? (pixels[e + div + centre].style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 40%, 1)`)
-        : (pixels[e + div + centre].style.backgroundColor = this.state.pixleColor);
+        : (pixels[e + div + centre].style.backgroundColor = colors ? colors[i] : this.state.pixleColor);
       pixels[e + div + centre].dataset.live = 'true';
     });
   };
@@ -256,10 +258,14 @@ export default class GameOfLife extends Component {
       const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
       if (!this.state.isPaused) {
         const getDraw = [];
+        const getColors = [];
         pixels.forEach(e => getDraw.push(Number(e.dataset.pos)));
+        pixels.forEach(e => getColors.push(window.getComputedStyle(e).backgroundColor));
         lastPaint = getDraw;
+        lastPaintColors = getColors;
         lastPaintGrid = [this.state.gridWidth, this.state.gridHeight];
         localStorage.setItem('lastPaint', JSON.stringify(getDraw));
+        localStorage.setItem('lastPaintColors', JSON.stringify(getColors));
         localStorage.setItem('lastPaintGrid', JSON.stringify(lastPaintGrid));
       }
       interval = setInterval(() => {
@@ -312,14 +318,15 @@ export default class GameOfLife extends Component {
         alert(`can't retrive last paint, current grid size is smaller than ${lastPaintGrid[0]}x${lastPaintGrid[1]}`);
       } else if (lastPaintGrid[0] !== this.state.gridWidth || lastPaintGrid[1] !== this.state.gridHeight) {
         alert(`this paint was painted orginaly on ${lastPaintGrid[0]}x${lastPaintGrid[1]} grid`);
-        this.applyPattren(lastPaint, lastPaintGrid[0]);
-      } else this.applyPattren(lastPaint, lastPaintGrid[0]);
+        this.applyPattren(lastPaint, lastPaintColors, lastPaintGrid[0]);
+      } else this.applyPattren(lastPaint, lastPaintColors, lastPaintGrid[0]);
     } else if (localStorage.getItem('lastPaint')) {
       const getLastPaint = JSON.parse(localStorage.getItem('lastPaint'));
+      const getLastPaintColros = JSON.parse(localStorage.getItem('lastPaintColors'));
       const getLastPaintGrid = JSON.parse(localStorage.getItem('lastPaintGrid'));
       if (getLastPaintGrid[0] > this.state.gridWidth || getLastPaintGrid[1] > this.state.gridHeight) {
         alert(`can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`);
-      } else this.applyPattren(getLastPaint, getLastPaintGrid[0]);
+      } else this.applyPattren(getLastPaint, getLastPaintColros, getLastPaintGrid[0]);
     } else alert('Last Paint Not found');
   };
 
@@ -353,7 +360,7 @@ export default class GameOfLife extends Component {
 
   copyToClipBoard = () => {
     this.pauseRender();
-    html2canvas(document.querySelector('#lifeDeathContainer')).then(canvas => {
+    html2canvas(document.querySelector('#lifeDeathContainer'), {scale: 2}).then(canvas => {
       canvas.toBlob(e => {
         navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
           if (result.state === 'granted' || result.state === 'prompt') {
@@ -384,7 +391,6 @@ export default class GameOfLife extends Component {
               windowTop = el.getBoundingClientRect().top - e.clientY;
               window.addEventListener('mousemove', this.grabPanel);
             }}
-            // onMouseUp={() => window.removeEventListener('mousemove', this.grabPanel)}
           >
             <svg
               xmlns='http://www.w3.org/2000/svg'
@@ -678,10 +684,6 @@ export default class GameOfLife extends Component {
             value={this.state.pixleColor}
             onChange={e => {
               this.setState({ pixleColor: e.target.value, isRandomColor: false });
-              // const pixels = document.querySelectorAll('[data-live=true]');
-              // pixels.forEach(el => {
-              //   el.style.backgroundColor = e.target.value;
-              // });
               localStorage.setItem('pixleColor', e.target.value);
             }}
           ></input>
@@ -730,22 +732,22 @@ export default class GameOfLife extends Component {
               if (this.state.gridWidth < 45 || this.state.gridHeight < 45) {
                 alert('this patren requiers a 45x45 grid and greater');
               } else if (value === 'simkinGliderGun') {
-                this.applyPattren(pattrens[value], 60, 0, 1);
+                this.applyPattren(pattrens[value], undefined, 60, 0, 1);
               } else if (value === 'PentaDecathlon') {
-                this.applyPattren(pattrens[value], 60, 4, 8);
+                this.applyPattren(pattrens[value], undefined, 60, 4, 8);
               } else if (value === 'pulsar') {
-                this.applyPattren(pattrens[value], 60, 7, 7);
+                this.applyPattren(pattrens[value], undefined, 60, 7, 7);
               } else if (value === 'LightWeightSpaceship') {
-                this.applyPattren(pattrens[value], 60, 0, 2);
+                this.applyPattren(pattrens[value], undefined, 60, 0, 2);
               } else if (value === 'MiddleWeightSpaceship') {
-                this.applyPattren(pattrens[value], 60, 0, 3);
+                this.applyPattren(pattrens[value], undefined, 60, 0, 3);
               } else if (value === 'HeavyWeightSpaceship') {
-                this.applyPattren(pattrens[value], 60, 0, 3);
+                this.applyPattren(pattrens[value], undefined, 60, 0, 3);
               } else if (value === 'omarDrawing') {
-                this.applyPattren(pattrens[value], 60, 4, 2);
+                this.applyPattren(pattrens[value], undefined, 60, 4, 2);
               } else if (value === 'heart') {
-                this.applyPattren(pattrens[value], 60, 1, 2);
-              } else if (value !== '---') this.applyPattren(pattrens[value], 60);
+                this.applyPattren(pattrens[value], undefined, 60, 1, 2);
+              } else if (value !== '---') this.applyPattren(pattrens[value], undefined, 60);
             }}
           >
             <option value='---'>---</option>
