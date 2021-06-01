@@ -682,7 +682,7 @@ export default class GameOfLife extends Component {
           <div className='devider'></div>
 
           <button
-            className='.buttons'
+            className='buttons'
             style={{
               backgroundColor: this.state.isRandomColor ? '#383838' : 'initial',
               border: this.state.isRandomColor ? 'solid 1px #636363' : 'none',
