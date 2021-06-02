@@ -18,6 +18,79 @@ p {
   z-index: 5;
   display: none;
 }
+#popUp {
+  position: absolute;
+  width: 400px;
+  height: 200px;
+  left: 40vw;
+  top: 200px;
+  background-color: #1a1a1a;
+  border: solid 4px #535353;
+  border-top: none;
+  margin: auto;
+  z-index: 6;
+  display: none;
+  box-shadow: 0px 0px 3px 0px rgb(0 0 0 / 75%);
+}
+#popUpHeader {
+  width: 100%;
+  height: 20px;
+  background-color: #535353;
+}
+#popUpHeader p {
+  font-size: 10px;
+  color: #d7d7d7;
+  font-family: system-ui;
+  margin: 0px;
+  margin-left: 5px;
+  padding-top: 2px;
+  float: left;
+}
+#closePopUp {
+  padding: 0px;
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  border: none;
+  font-weight: 200;
+  font-size: 14px;
+  background-color: initial;
+  cursor: pointer;
+  float: right;
+}
+#closePopUp:hover {
+  background-color: #454545;
+}
+#popUp > button {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20%;
+  padding: 0px;
+  height: 30px;
+  border-radius: 2px;
+  border: none;
+  font-weight: 200;
+  font-size: 14px;
+  background-color: #535353;
+  color: #d7d7d7;
+  cursor: pointer;
+}
+#popUp > button:hover {
+  background-color: #454545;
+  border: solid 1px #636363;
+}
+#popUp > p {
+  position: absolute;
+  width: 100%;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  color: #d7d7d7;
+  font-family: system-ui;
+}
 #saveWindow {
   position: absolute;
   width: 400px;

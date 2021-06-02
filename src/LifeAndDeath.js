@@ -2,6 +2,7 @@ import html2canvas from 'html2canvas';
 import React, { Component } from 'react';
 import { pattrens } from './pattrens';
 import { saveAs } from 'file-saver';
+import { requestFrame } from 'selector_dom';
 
 let interval, lastPaint, lastPaintColors, lastPaintGrid, windowTop, windowLeft, lineTop, lineLeft, forResize, isWindowOpened;
 let undo = [];
@@ -34,7 +35,9 @@ export default class GameOfLife extends Component {
       const getLastPaintColros = JSON.parse(localStorage.getItem('lastPaintColors'));
       const getLastPaintGrid = JSON.parse(localStorage.getItem('lastPaintGrid'));
       if (getLastPaintGrid[0] > this.state.gridWidth || getLastPaintGrid[1] > this.state.gridHeight) {
-        alert(`can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`);
+        this.openPopUp(
+          `Can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`
+        );
       } else this.applyPattren(getLastPaint, getLastPaintColros, getLastPaintGrid[0]);
     }
     window.addEventListener('mouseup', () => {
@@ -44,6 +47,7 @@ export default class GameOfLife extends Component {
       window.removeEventListener('mousemove', this.grabGrid);
       window.removeEventListener('mousemove', this.grabSave);
       window.removeEventListener('mousemove', this.grabLoad);
+      window.removeEventListener('mousemove', this.grabPopUp);
     });
     this.keyboardShourtcuts();
   }
@@ -311,9 +315,9 @@ export default class GameOfLife extends Component {
     this.setState({ isPlaying: false, isPaused: false });
     if (lastPaint) {
       if (lastPaintGrid[0] > this.state.gridWidth || lastPaintGrid[1] > this.state.gridHeight) {
-        alert(`can't retrive last paint, current grid size is smaller than ${lastPaintGrid[0]}x${lastPaintGrid[1]}`);
+        this.openPopUp(`Can't retrive last paint, current grid size is smaller than ${lastPaintGrid[0]}x${lastPaintGrid[1]}`);
       } else if (lastPaintGrid[0] !== this.state.gridWidth || lastPaintGrid[1] !== this.state.gridHeight) {
-        alert(`this paint was painted orginaly on ${lastPaintGrid[0]}x${lastPaintGrid[1]} grid`);
+        this.openPopUp(`This paint was painted orginaly on ${lastPaintGrid[0]}x${lastPaintGrid[1]} grid`);
         this.applyPattren(lastPaint, lastPaintColors, lastPaintGrid[0]);
       } else this.applyPattren(lastPaint, lastPaintColors, lastPaintGrid[0]);
     } else if (localStorage.getItem('lastPaint')) {
@@ -321,9 +325,11 @@ export default class GameOfLife extends Component {
       const getLastPaintColros = JSON.parse(localStorage.getItem('lastPaintColors'));
       const getLastPaintGrid = JSON.parse(localStorage.getItem('lastPaintGrid'));
       if (getLastPaintGrid[0] > this.state.gridWidth || getLastPaintGrid[1] > this.state.gridHeight) {
-        alert(`can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`);
+        this.openPopUp(
+          `Can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`
+        );
       } else this.applyPattren(getLastPaint, getLastPaintColros, getLastPaintGrid[0]);
-    } else alert('Last Paint Not found');
+    } else this.openPopUp('Last Paint Not found');
   };
 
   trackMouse = l => {
@@ -370,6 +376,14 @@ export default class GameOfLife extends Component {
     grabEl.style.left = `${l.pageX}px`;
   };
 
+  grabPopUp = l => {
+    l.preventDefault();
+    const grabEl = document.getElementById('popUp');
+    grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY}px`;
+    grabEl.style.left = `${l.pageX}px`;
+  };
+
   copyToClipBoard = () => {
     this.pauseRender();
     html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 2 }).then(canvas => {
@@ -403,14 +417,28 @@ export default class GameOfLife extends Component {
   toggleSaveWindow = () => {
     const winEl = document.getElementById('saveWindow');
     const blured = document.getElementById('blured');
+    const getMatrix = window
+      .getComputedStyle(winEl)
+      .getPropertyValue('transform')
+      .match(/-?\d+\.?\d*/g);
     const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
     if (isOpen) {
-      winEl.style.display = 'none';
-      blured.style.display = 'none';
+      requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
+        winEl.style.transform = getMatrix ? `translate(${getMatrix[4]}px,${getMatrix[5]}px) scale(${s})` : `scale(${s})`;
+        blured.style.opacity = s;
+        if (s === 0) {
+          winEl.style.display = 'none';
+          blured.style.display = 'none';
+        }
+      });
       isWindowOpened = false;
     } else {
       winEl.style.display = 'initial';
       blured.style.display = 'block';
+      requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
+        winEl.style.transform = `scale(${s})`;
+        blured.style.opacity = s;
+      });
       isWindowOpened = true;
     }
   };
@@ -418,16 +446,67 @@ export default class GameOfLife extends Component {
   toggleLoadWindow = () => {
     const winEl = document.getElementById('loadWindow');
     const blured = document.getElementById('blured');
+    const getMatrix = window
+      .getComputedStyle(winEl)
+      .getPropertyValue('transform')
+      .match(/-?\d+\.?\d*/g);
     const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
     if (isOpen) {
-      winEl.style.display = 'none';
-      blured.style.display = 'none';
+      requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
+        winEl.style.transform = getMatrix ? `translate(${getMatrix[4]}px,${getMatrix[5]}px) scale(${s})` : `scale(${s})`;
+        blured.style.opacity = s;
+        if (s === 0) {
+          winEl.style.display = 'none';
+          blured.style.display = 'none';
+        }
+      });
+
       isWindowOpened = false;
     } else {
       winEl.style.display = 'initial';
       blured.style.display = 'block';
+      requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
+        winEl.style.transform = `scale(${s})`;
+        blured.style.opacity = s;
+      });
       isWindowOpened = true;
     }
+  };
+
+  togglePopUp = () => {
+    const winEl = document.getElementById('popUp');
+    const blured = document.getElementById('blured');
+    const getMatrix = window
+      .getComputedStyle(winEl)
+      .getPropertyValue('transform')
+      .match(/-?\d+\.?\d*/g);
+    const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
+    if (isOpen) {
+      requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
+        winEl.style.transform = getMatrix ? `translate(${getMatrix[4]}px,${getMatrix[5]}px) scale(${s})` : `scale(${s})`;
+        blured.style.opacity = s;
+        if (s === 0) {
+          winEl.style.display = 'none';
+          blured.style.display = 'none';
+        }
+      });
+
+      isWindowOpened = false;
+    } else {
+      winEl.style.display = 'initial';
+      blured.style.display = 'block';
+      requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
+        winEl.style.transform = `scale(${s})`;
+        blured.style.opacity = s;
+      });
+      isWindowOpened = true;
+    }
+  };
+
+  openPopUp = t => {
+    const textEl = document.getElementById('popUpText');
+    textEl.innerHTML = t;
+    this.togglePopUp();
   };
 
   saveDrawing = () => {
@@ -903,7 +982,7 @@ export default class GameOfLife extends Component {
             onChange={e => {
               const value = e.target.value;
               if (this.state.gridWidth < 45 || this.state.gridHeight < 45) {
-                alert('this patren requiers a 45x45 grid and greater');
+                this.openPopUp('This patren requiers a 45x45 grid and greater');
               } else if (value === 'simkinGliderGun') {
                 this.applyPattren(pattrens[value], undefined, 60, 0, 1);
               } else if (value === 'PentaDecathlon') {
@@ -935,6 +1014,26 @@ export default class GameOfLife extends Component {
             <option value='omarDrawing'>Omar's Drawing</option>
           </select>
           <p className='controlLabel'>Pattrens</p>
+        </div>
+
+        <div id='popUp'>
+          <div
+            id='popUpHeader'
+            onMouseDown={e => {
+              windowLeft = e.target.getBoundingClientRect().left - e.clientX;
+              windowTop = e.target.getBoundingClientRect().top - e.clientY;
+              window.addEventListener('mousemove', this.grabPopUp);
+            }}
+          >
+            <p>Alert</p>
+            <button id='closePopUp' onClick={this.togglePopUp} onMouseDown={e => e.stopPropagation()}>
+              <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
+                <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
+              </svg>
+            </button>
+          </div>
+          <p id='popUpText'></p>
+          <button onClick={this.togglePopUp}>OK</button>
         </div>
 
         <div id='saveWindow'>
