@@ -947,7 +947,7 @@ export default class GameOfLife extends Component {
             }}
           >
             <p>Save your drawing to the browser</p>
-            <button id='closeSave' onClick={this.toggleSaveWindow}>
+            <button id='closeSave' onClick={this.toggleSaveWindow} onMouseDown={e => e.stopPropagation()}>
               <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
                 <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
               </svg>
@@ -971,7 +971,7 @@ export default class GameOfLife extends Component {
             }}
           >
             <p>Load your drawings from the browser</p>
-            <button id='closeSave' onClick={this.toggleLoadWindow}>
+            <button id='closeSave' onClick={this.toggleLoadWindow} onMouseDown={e => e.stopPropagation()}>
               <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
                 <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
               </svg>
@@ -1010,6 +1010,7 @@ export default class GameOfLife extends Component {
                 document.getElementById('imageLayer').style.display = 'none';
                 document.getElementById('getImage').value = '';
               }}
+              onMouseDown={e => e.stopPropagation()}
             >
               <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
                 <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
