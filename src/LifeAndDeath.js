@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 import { pattrens } from './pattrens';
 import { saveAs } from 'file-saver';
 
-let interval, lastPaint, lastPaintColors, lastPaintGrid, windowTop, windowLeft, lineTop, lineLeft, forResize;
+let interval, lastPaint, lastPaintColors, lastPaintGrid, windowTop, windowLeft, lineTop, lineLeft, forResize, isWindowOpened;
 let undo = [];
 let redo = [];
 
@@ -42,23 +42,25 @@ export default class GameOfLife extends Component {
       window.removeEventListener('mousemove', this.grabPanel);
       window.removeEventListener('mousemove', this.grabLayer);
       window.removeEventListener('mousemove', this.grabGrid);
+      window.removeEventListener('mousemove', this.grabSave);
+      window.removeEventListener('mousemove', this.grabLoad);
     });
     this.keyboardShourtcuts();
   }
 
   keyboardShourtcuts = () => {
     window.addEventListener('keyup', e => {
-      if (e.ctrlKey && e.key.toLowerCase() === 'z' && undo.length > 0 && !this.state.drwaMode) {
-        document.querySelectorAll('input[type="number"').forEach(e => e.blur());
-        this.undo();
-      } else if (e.ctrlKey && e.key.toLowerCase() === 'y' && redo.length > 0 && !this.state.drwaMode) {
-        document.querySelectorAll('input[type="number"').forEach(e => e.blur());
-        this.redo();
-      } else if (e.key.toLowerCase() === 'q') {
-        this.downloadImg();
-      } else if (e.key.toLowerCase() === 'e' && !this.state.drwaMode) {
-        document.querySelectorAll('input[type="number"').forEach(e => e.blur());
-        this.state.eraser ? this.setState({ eraser: false }) : this.setState({ eraser: true });
+      if (!isWindowOpened) {
+        if (e.ctrlKey && e.key.toLowerCase() === 'z' && undo.length > 0 && !this.state.drwaMode) {
+          document.querySelectorAll('input[type="number"').forEach(e => e.blur());
+          this.undo();
+        } else if (e.ctrlKey && e.key.toLowerCase() === 'y' && redo.length > 0 && !this.state.drwaMode) {
+          document.querySelectorAll('input[type="number"').forEach(e => e.blur());
+          this.redo();
+        } else if (e.key.toLowerCase() === 'e' && !this.state.drwaMode) {
+          document.querySelectorAll('input[type="number"').forEach(e => e.blur());
+          this.state.eraser ? this.setState({ eraser: false }) : this.setState({ eraser: true });
+        }
       }
     });
   };
@@ -352,6 +354,22 @@ export default class GameOfLife extends Component {
     grabEl.style.left = `${l.pageX}px`;
   };
 
+  grabSave = l => {
+    l.preventDefault();
+    const grabEl = document.getElementById('saveWindow');
+    grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY}px`;
+    grabEl.style.left = `${l.pageX}px`;
+  };
+
+  grabLoad = l => {
+    l.preventDefault();
+    const grabEl = document.getElementById('loadWindow');
+    grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY}px`;
+    grabEl.style.left = `${l.pageX}px`;
+  };
+
   copyToClipBoard = () => {
     this.pauseRender();
     html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 2 }).then(canvas => {
@@ -380,6 +398,127 @@ export default class GameOfLife extends Component {
     document.getElementById('img').style.width =
       parseInt(forResize[0], 10) + (e.clientX - forResize[2] + e.clientY - forResize[3]) / 2 + 'px';
     document.getElementById('img').style.height = 'auto';
+  };
+
+  toggleSaveWindow = () => {
+    const winEl = document.getElementById('saveWindow');
+    const blured = document.getElementById('blured');
+    const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
+    if (isOpen) {
+      winEl.style.display = 'none';
+      blured.style.display = 'none';
+      isWindowOpened = false;
+    } else {
+      winEl.style.display = 'initial';
+      blured.style.display = 'block';
+      isWindowOpened = true;
+    }
+  };
+
+  toggleLoadWindow = () => {
+    const winEl = document.getElementById('loadWindow');
+    const blured = document.getElementById('blured');
+    const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
+    if (isOpen) {
+      winEl.style.display = 'none';
+      blured.style.display = 'none';
+      isWindowOpened = false;
+    } else {
+      winEl.style.display = 'initial';
+      blured.style.display = 'block';
+      isWindowOpened = true;
+    }
+  };
+
+  saveDrawing = () => {
+    this.pauseRender();
+    const buttons = document.querySelectorAll('#saveCancleContainer button');
+    const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
+    buttons.forEach(e => (e.disabled = true));
+    const newSave = {
+      livePixels: [],
+      pixelsColors: [],
+      savingName: document.getElementById('saveName').value,
+      drawngImg: '',
+      saveSettings: [
+        this.state.gridWidth,
+        this.state.gridHeight,
+        this.state.pixelSize,
+        this.state.pixelSpace,
+        this.state.backgroundPixleColor,
+      ],
+    };
+    pixels.forEach(e => newSave.livePixels.push(Number(e.dataset.pos)));
+    pixels.forEach(e => newSave.pixelsColors.push(window.getComputedStyle(e).backgroundColor));
+    html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 2 }).then(canvas => {
+      const dataURL = canvas.toDataURL('image/png');
+      newSave.drawngImg = dataURL;
+      if (localStorage.getItem('saved')) {
+        const saved = JSON.parse(localStorage.getItem('saved'));
+        saved.push(newSave);
+        localStorage.setItem('saved', JSON.stringify(saved));
+      } else {
+        localStorage.setItem('saved', JSON.stringify([newSave]));
+      }
+      buttons.forEach(e => (e.disabled = false));
+      this.toggleSaveWindow();
+    });
+  };
+
+  renderLoadCards = () => {
+    if (localStorage.getItem('saved')) {
+      const saved = JSON.parse(localStorage.getItem('saved'));
+      return saved.map((e, i) => (
+        <LoadCards
+          loadHandle={() => this.loadSaves(i)}
+          removeSaveHandle={e => this.removeSave(e, i)}
+          img={e.drawngImg}
+          name={e.savingName}
+          width={e.saveSettings[0]}
+          height={e.saveSettings[1]}
+          loadsKeys={i}
+          key={i}
+        ></LoadCards>
+      ));
+    }
+  };
+
+  loadSaves = i => {
+    this.pauseRender();
+    let pixels = document.querySelectorAll('.lifeDeathPixels');
+    const saved = JSON.parse(localStorage.getItem('saved'));
+    this.setState(
+      {
+        gridWidth: saved[i].saveSettings[0],
+        gridHeight: saved[i].saveSettings[1],
+        pixelSize: saved[i].saveSettings[2],
+        pixelSpace: saved[i].saveSettings[3],
+        backgroundPixleColor: saved[i].saveSettings[4],
+      },
+      () => {
+        localStorage.setItem('gridWidth', saved[i].saveSettings[0]);
+        localStorage.setItem('gridHeight', saved[i].saveSettings[1]);
+        localStorage.setItem('pixelSize', saved[i].saveSettings[2]);
+        localStorage.setItem('pixelSpace', saved[i].saveSettings[3]);
+        localStorage.setItem('backgroundPixleColor', saved[i].saveSettings[4]);
+        pixels.forEach(el => el.remove());
+        this.appendDivs(saved[i].saveSettings[0], saved[i].saveSettings[1]);
+        pixels = document.querySelectorAll('.lifeDeathPixels');
+        saved[i].livePixels.forEach((e, ind) => {
+          pixels[e].style.backgroundColor = saved[i].pixelsColors[ind];
+          pixels[e].dataset.live = 'true';
+        });
+        this.toggleLoadWindow();
+      }
+    );
+  };
+
+  removeSave = (e, i) => {
+    e.stopPropagation();
+    const saved = JSON.parse(localStorage.getItem('saved'));
+    saved.splice(i, 1);
+    saved.length === 0 ? localStorage.removeItem('saved') : localStorage.setItem('saved', JSON.stringify(saved));
+    document.querySelectorAll(`.loadCard[data-key="${i}"]`)[0].style.display = 'none';
   };
 
   render() {
@@ -430,6 +569,20 @@ export default class GameOfLife extends Component {
                 fill='#D7D7D7'
               >
                 <path d='M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z' />
+              </svg>
+            </button>
+          </div>
+
+          <div className='devider'></div>
+          <div className='twoButtonsContainer'>
+            <button title='Save drawing' onClick={this.toggleSaveWindow}>
+              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
+                <path d='M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z' />{' '}
+              </svg>
+            </button>
+            <button title='Load drawing' onClick={this.toggleLoadWindow}>
+              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
+                <path d='M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z' />{' '}
               </svg>
             </button>
           </div>
@@ -784,6 +937,49 @@ export default class GameOfLife extends Component {
           <p className='controlLabel'>Pattrens</p>
         </div>
 
+        <div id='saveWindow'>
+          <div
+            id='saveWindowHeader'
+            onMouseDown={e => {
+              windowLeft = e.target.getBoundingClientRect().left - e.clientX;
+              windowTop = e.target.getBoundingClientRect().top - e.clientY;
+              window.addEventListener('mousemove', this.grabSave);
+            }}
+          >
+            <p>Save your drawing to the browser</p>
+            <button id='closeSave' onClick={this.toggleSaveWindow}>
+              <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
+                <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
+              </svg>
+            </button>
+          </div>
+          <input id='saveName' type='text' name='saveName' placeholder='Name'></input>
+          <label htmlFor='saveName'>Choose a name for your drawing</label>
+          <div id='saveCancleContainer'>
+            <button onClick={this.saveDrawing}>Save</button>
+            <button onClick={this.toggleSaveWindow}>Cancle</button>
+          </div>
+        </div>
+
+        <div id='loadWindow'>
+          <div
+            id='loadWindowHeader'
+            onMouseDown={e => {
+              windowLeft = e.target.getBoundingClientRect().left - e.clientX;
+              windowTop = e.target.getBoundingClientRect().top - e.clientY;
+              window.addEventListener('mousemove', this.grabLoad);
+            }}
+          >
+            <p>Load your drawings from the browser</p>
+            <button id='closeSave' onClick={this.toggleLoadWindow}>
+              <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
+                <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
+              </svg>
+            </button>
+          </div>
+          <div id='loadContents'>{this.renderLoadCards()}</div>
+        </div>
+
         <div id='imageLayer'>
           <div
             id='layerHeader'
@@ -792,7 +988,6 @@ export default class GameOfLife extends Component {
               windowTop = e.target.getBoundingClientRect().top - e.clientY;
               window.addEventListener('mousemove', this.grabLayer);
             }}
-            // onMouseUp={() => window.removeEventListener('mousemove', this.grabLayer)}
           >
             <input
               type='range'
@@ -806,7 +1001,7 @@ export default class GameOfLife extends Component {
                 return false;
               }}
               onChange={e => {
-                document.getElementById('img').style.opacity = e.target.value;
+                document.querySelectorAll('#imageLayer img')[0].style.opacity = e.target.value;
               }}
             ></input>
             <button
@@ -861,7 +1056,6 @@ export default class GameOfLife extends Component {
               windowTop = e.target.getBoundingClientRect().top - e.clientY;
               window.addEventListener('mousemove', this.grabGrid);
             }}
-            // onMouseUp={() => window.removeEventListener('mousemove', this.grabGrid)}
           >
             <p>
               {this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize)} x{' '}
@@ -924,7 +1118,28 @@ export default class GameOfLife extends Component {
             <nav id='MouseVerticalLine'></nav>
           </div>
         </div>
+
+        <div id='blured'></div>
       </>
     );
   }
+}
+
+function LoadCards(p) {
+  return (
+    <div className='loadCard' data-key={p.loadsKeys} onClick={p.loadHandle}>
+      <img src={p.img} alt='loadimg'></img>
+      <div className='loadInfos'>
+        <p>Name : {p.name}</p>
+        <p>
+          Size : {p.width} x {p.height} Grid
+        </p>
+      </div>
+      <button className='deleteSave' onClick={p.removeSaveHandle}>
+        <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
+          <path d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z' />
+        </svg>
+      </button>
+    </div>
+  );
 }
