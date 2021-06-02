@@ -339,15 +339,13 @@ export default class GameOfLife extends Component {
 
   grabPanel = l => {
     const grabEl = document.getElementById('controlPanel');
-    grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY}px`;
-    grabEl.style.left = `${l.pageX}px`;
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
   };
 
   grabGrid = l => {
     l.preventDefault();
     const grabEl = document.getElementById('windowContainer');
-    // grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
     grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
     grabEl.style.left = `${l.pageX + windowLeft}px`;
   };
@@ -355,33 +353,29 @@ export default class GameOfLife extends Component {
   grabLayer = l => {
     l.preventDefault();
     const grabEl = document.getElementById('imageLayer');
-    grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY}px`;
-    grabEl.style.left = `${l.pageX}px`;
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
   };
 
   grabSave = l => {
     l.preventDefault();
     const grabEl = document.getElementById('saveWindow');
-    grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY}px`;
-    grabEl.style.left = `${l.pageX}px`;
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
   };
 
   grabLoad = l => {
     l.preventDefault();
     const grabEl = document.getElementById('loadWindow');
-    grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY}px`;
-    grabEl.style.left = `${l.pageX}px`;
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
   };
 
   grabPopUp = l => {
     l.preventDefault();
     const grabEl = document.getElementById('popUp');
-    grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY}px`;
-    grabEl.style.left = `${l.pageX}px`;
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
   };
 
   copyToClipBoard = () => {
@@ -417,14 +411,10 @@ export default class GameOfLife extends Component {
   toggleSaveWindow = () => {
     const winEl = document.getElementById('saveWindow');
     const blured = document.getElementById('blured');
-    const getMatrix = window
-      .getComputedStyle(winEl)
-      .getPropertyValue('transform')
-      .match(/-?\d+\.?\d*/g);
     const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
     if (isOpen) {
       requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
-        winEl.style.transform = getMatrix ? `translate(${getMatrix[4]}px,${getMatrix[5]}px) scale(${s})` : `scale(${s})`;
+        winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
         if (s === 0) {
           winEl.style.display = 'none';
@@ -436,7 +426,7 @@ export default class GameOfLife extends Component {
       winEl.style.display = 'initial';
       blured.style.display = 'block';
       requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
-        winEl.style.transform = getMatrix ? `translate(${getMatrix[4]}px,${getMatrix[5]}px) scale(${s})` : `scale(${s})`;
+        winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
       });
       isWindowOpened = true;
@@ -450,31 +440,22 @@ export default class GameOfLife extends Component {
     saved
       ? (document.getElementById('noLoads').style.display = 'none')
       : (document.getElementById('noLoads').style.display = 'block');
-    const getMatrix = window
-      .getComputedStyle(winEl)
-      .getPropertyValue('transform')
-      .match(/-?\d+\.?\d*/g);
     const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
     if (isOpen) {
       requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
-        winEl.style.transform = getMatrix ? `translate(${getMatrix[4]}px,${getMatrix[5]}px) scale(${s})` : `scale(${s})`;
+        winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
         if (s === 0) {
           winEl.style.display = 'none';
           blured.style.display = 'none';
         }
       });
-
       isWindowOpened = false;
     } else {
       winEl.style.display = 'initial';
       blured.style.display = 'block';
-      const getMatrix = window
-        .getComputedStyle(winEl)
-        .getPropertyValue('transform')
-        .match(/-?\d+\.?\d*/g);
       requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
-        winEl.style.transform = getMatrix ? `translate(${getMatrix[4]}px,${getMatrix[5]}px) scale(${s})` : `scale(${s})`;
+        winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
       });
       isWindowOpened = true;
@@ -484,14 +465,10 @@ export default class GameOfLife extends Component {
   togglePopUp = () => {
     const winEl = document.getElementById('popUp');
     const blured = document.getElementById('blured');
-    const getMatrix = window
-      .getComputedStyle(winEl)
-      .getPropertyValue('transform')
-      .match(/-?\d+\.?\d*/g);
     const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
     if (isOpen) {
       requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
-        winEl.style.transform = getMatrix ? `translate(${getMatrix[4]}px,${getMatrix[5]}px) scale(${s})` : `scale(${s})`;
+        winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
         if (s === 0) {
           winEl.style.display = 'none';
@@ -504,7 +481,7 @@ export default class GameOfLife extends Component {
       winEl.style.display = 'initial';
       blured.style.display = 'block';
       requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
-        winEl.style.transform = getMatrix ? `translate(${getMatrix[4]}px,${getMatrix[5]}px) scale(${s})` : `scale(${s})`;
+        winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
       });
       isWindowOpened = true;

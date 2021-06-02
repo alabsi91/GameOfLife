@@ -185,8 +185,7 @@ p {
   position: absolute;
   width: 500px;
   height: 95vh;
-  left: 50vw;
-  transform: translateX(-50%);
+  left: calc(50vw - 250px);
   top: 20px;
   background-color: #1a1a1a;
   border: solid 4px #535353;
