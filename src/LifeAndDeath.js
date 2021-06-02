@@ -347,9 +347,9 @@ export default class GameOfLife extends Component {
   grabGrid = l => {
     l.preventDefault();
     const grabEl = document.getElementById('windowContainer');
-    grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY}px`;
-    grabEl.style.left = `${l.pageX}px`;
+    // grabEl.style.transform = `translate(${windowLeft}px,${windowTop}px)`;
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
   };
 
   grabLayer = l => {
@@ -446,6 +446,10 @@ export default class GameOfLife extends Component {
   toggleLoadWindow = () => {
     const winEl = document.getElementById('loadWindow');
     const blured = document.getElementById('blured');
+    const saved = JSON.parse(localStorage.getItem('saved'));
+    saved
+      ? (document.getElementById('noLoads').style.display = 'none')
+      : (document.getElementById('noLoads').style.display = 'block');
     const getMatrix = window
       .getComputedStyle(winEl)
       .getPropertyValue('transform')
@@ -549,21 +553,19 @@ export default class GameOfLife extends Component {
   };
 
   renderLoadCards = () => {
-    if (localStorage.getItem('saved')) {
-      const saved = JSON.parse(localStorage.getItem('saved'));
-      return saved.map((e, i) => (
-        <LoadCards
-          loadHandle={() => this.loadSaves(i)}
-          removeSaveHandle={e => this.removeSave(e, i)}
-          img={e.drawngImg}
-          name={e.savingName}
-          width={e.saveSettings[0]}
-          height={e.saveSettings[1]}
-          loadsKeys={i}
-          key={i}
-        ></LoadCards>
-      ));
-    }
+    const saved = JSON.parse(localStorage.getItem('saved'));
+    return saved?.map((e, i) => (
+      <LoadCards
+        loadHandle={() => this.loadSaves(i)}
+        removeSaveHandle={e => this.removeSave(e, i)}
+        img={e.drawngImg}
+        name={e.savingName}
+        width={e.saveSettings[0]}
+        height={e.saveSettings[1]}
+        loadsKeys={i}
+        key={i}
+      ></LoadCards>
+    ));
   };
 
   loadSaves = i => {
@@ -601,6 +603,9 @@ export default class GameOfLife extends Component {
     const saved = JSON.parse(localStorage.getItem('saved'));
     saved.splice(i, 1);
     saved.length === 0 ? localStorage.removeItem('saved') : localStorage.setItem('saved', JSON.stringify(saved));
+    saved.length === 0
+      ? (document.getElementById('noLoads').style.display = 'block')
+      : (document.getElementById('noLoads').style.display = 'none');
     document.querySelectorAll(`.loadCard[data-key="${i}"]`)[0].style.display = 'none';
   };
 
@@ -1080,7 +1085,10 @@ export default class GameOfLife extends Component {
               </svg>
             </button>
           </div>
-          <div id='loadContents'>{this.renderLoadCards()}</div>
+          <div id='loadContents'>
+            {this.renderLoadCards()}
+            <p id='noLoads'>No Saved Drawings found</p>
+          </div>
         </div>
 
         <div id='imageLayer'>
