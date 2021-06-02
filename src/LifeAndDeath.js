@@ -436,7 +436,7 @@ export default class GameOfLife extends Component {
       winEl.style.display = 'initial';
       blured.style.display = 'block';
       requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
+        winEl.style.transform = getMatrix ? `translate(${getMatrix[4]}px,${getMatrix[5]}px) scale(${s})` : `scale(${s})`;
         blured.style.opacity = s;
       });
       isWindowOpened = true;
@@ -465,8 +465,12 @@ export default class GameOfLife extends Component {
     } else {
       winEl.style.display = 'initial';
       blured.style.display = 'block';
+      const getMatrix = window
+        .getComputedStyle(winEl)
+        .getPropertyValue('transform')
+        .match(/-?\d+\.?\d*/g);
       requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
+        winEl.style.transform = getMatrix ? `translate(${getMatrix[4]}px,${getMatrix[5]}px) scale(${s})` : `scale(${s})`;
         blured.style.opacity = s;
       });
       isWindowOpened = true;
@@ -496,7 +500,7 @@ export default class GameOfLife extends Component {
       winEl.style.display = 'initial';
       blured.style.display = 'block';
       requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
+        winEl.style.transform = getMatrix ? `translate(${getMatrix[4]}px,${getMatrix[5]}px) scale(${s})` : `scale(${s})`;
         blured.style.opacity = s;
       });
       isWindowOpened = true;
