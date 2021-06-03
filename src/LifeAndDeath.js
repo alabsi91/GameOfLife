@@ -632,9 +632,15 @@ export default class GameOfLife extends Component {
       await html2canvas(el).then(canvas => imgs.push(canvas.toDataURL('image/png')));
       if (i >= delay) this.renderLifeDeath();
     }
+    if (backwards) {
+      const revArray = [];
+      for (let i = imgs.length - 1; i >= 0; i--) revArray.push(imgs[i]);
+      imgs.push(...revArray);
+    }
+    
     createGIF(
       {
-        images: backwards ? [...imgs, ...imgs.reverse()] : imgs,
+        images: imgs,
         gifWidth: this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize),
         gifHeight: this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize),
         interval: interval / 1000,
