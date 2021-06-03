@@ -624,12 +624,12 @@ export default class GameOfLife extends Component {
     document.querySelectorAll(`.loadCard[data-key="${i}"]`)[0].style.display = 'none';
   };
 
-  captureImgs = async (frmaes, interval) => {
+  captureImgs = async (frmaes, interval, delay) => {
     const el = document.querySelector('#lifeDeathContainer');
     const imgs = [];
-    for (let i = 0; i < frmaes; i++) {
+    for (let i = 0; i < frmaes + delay; i++) {
       await html2canvas(el).then(canvas => imgs.push(canvas.toDataURL('image/png')));
-      this.renderLifeDeath();
+      if (i >= delay) this.renderLifeDeath();
     }
     createGIF(
       {
@@ -647,11 +647,12 @@ export default class GameOfLife extends Component {
     const isPNG = document.getElementById('downloadPNG').checked ? true : false;
     const frames = Number(document.getElementById('gifFrames').value);
     const inval = Number(document.getElementById('gifInterval').value);
+    const delay = Number(document.getElementById('gifDelay').value);
     if (isPNG) {
       this.downloadImg();
       this.toggleDownloadWindow();
     } else {
-      this.captureImgs(frames, inval);
+      this.captureImgs(frames, inval, delay);
     }
   };
 
@@ -1141,6 +1142,9 @@ export default class GameOfLife extends Component {
             <br></br>
             <label htmlFor='interval'>Interval (ms) : </label>
             <input id='gifInterval' type='number' name='interval' defaultValue='100' disabled></input>
+            <br></br>
+            <label htmlFor='interval'>Delay (frames) : </label>
+            <input id='gifDelay' type='number' name='interval' defaultValue='4' disabled></input>
           </div>
           <div id='downloadCancleContainer'>
             <button onClick={this.downloadButtonHandle}>Download</button>
