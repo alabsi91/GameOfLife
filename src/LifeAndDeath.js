@@ -626,6 +626,7 @@ export default class GameOfLife extends Component {
 
   captureImgs = async (frmaes, interval, delay, backwards) => {
     const el = document.querySelector('#lifeDeathContainer');
+    const buttons = document.querySelectorAll('#downloadCancleContainer button');
     const imgs = [];
     for (let i = 0; i < frmaes + delay; i++) {
       await html2canvas(el).then(canvas => imgs.push(canvas.toDataURL('image/png')));
@@ -640,10 +641,12 @@ export default class GameOfLife extends Component {
       },
       obj => (!obj.error ? saveAs(obj.image, 'Game of life') : console.error(obj.error))
     );
+    buttons.forEach(e => (e.disabled = false));
     this.toggleDownloadWindow();
   };
 
   downloadButtonHandle = () => {
+    const buttons = document.querySelectorAll('#downloadCancleContainer button');
     const isPNG = document.getElementById('downloadPNG').checked ? true : false;
     const isBounce = document.getElementById('gifBounce').checked ? true : false;
     const frames = Number(document.getElementById('gifFrames').value);
@@ -653,6 +656,7 @@ export default class GameOfLife extends Component {
       this.downloadImg();
       this.toggleDownloadWindow();
     } else {
+      buttons.forEach(e => (e.disabled = true));
       this.captureImgs(frames, inval, delay, isBounce);
     }
   };
