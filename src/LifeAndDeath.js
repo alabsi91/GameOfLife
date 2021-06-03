@@ -3,6 +3,7 @@ import React, { Component } from 'react';
 import { pattrens } from './pattrens';
 import { saveAs } from 'file-saver';
 import { requestFrame } from 'selector_dom';
+import { createGIF } from 'gifshot';
 
 let interval, lastPaint, lastPaintColors, lastPaintGrid, windowTop, windowLeft, lineTop, lineLeft, forResize, isWindowOpened;
 let undo = [];
@@ -48,6 +49,7 @@ export default class GameOfLife extends Component {
       window.removeEventListener('mousemove', this.grabSave);
       window.removeEventListener('mousemove', this.grabLoad);
       window.removeEventListener('mousemove', this.grabPopUp);
+      window.removeEventListener('mousemove', this.grabDownload);
     });
     this.keyboardShourtcuts();
   }
@@ -371,6 +373,13 @@ export default class GameOfLife extends Component {
     grabEl.style.left = `${l.pageX + windowLeft}px`;
   };
 
+  grabDownload = l => {
+    l.preventDefault();
+    const grabEl = document.getElementById('downloadWindow');
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
+  };
+
   grabPopUp = l => {
     l.preventDefault();
     const grabEl = document.getElementById('popUp');
@@ -435,6 +444,35 @@ export default class GameOfLife extends Component {
 
   toggleLoadWindow = () => {
     const winEl = document.getElementById('loadWindow');
+    const blured = document.getElementById('blured');
+    const saved = JSON.parse(localStorage.getItem('saved'));
+    saved
+      ? (document.getElementById('noLoads').style.display = 'none')
+      : (document.getElementById('noLoads').style.display = 'block');
+    const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
+    if (isOpen) {
+      requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
+        winEl.style.transform = `scale(${s})`;
+        blured.style.opacity = s;
+        if (s === 0) {
+          winEl.style.display = 'none';
+          blured.style.display = 'none';
+        }
+      });
+      isWindowOpened = false;
+    } else {
+      winEl.style.display = 'initial';
+      blured.style.display = 'block';
+      requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
+        winEl.style.transform = `scale(${s})`;
+        blured.style.opacity = s;
+      });
+      isWindowOpened = true;
+    }
+  };
+
+  toggleDownloadWindow = () => {
+    const winEl = document.getElementById('downloadWindow');
     const blured = document.getElementById('blured');
     const saved = JSON.parse(localStorage.getItem('saved'));
     saved
@@ -586,6 +624,37 @@ export default class GameOfLife extends Component {
     document.querySelectorAll(`.loadCard[data-key="${i}"]`)[0].style.display = 'none';
   };
 
+  captureImgs = async (frmaes, interval) => {
+    const el = document.querySelector('#lifeDeathContainer');
+    const imgs = [];
+    for (let i = 0; i < frmaes; i++) {
+      await html2canvas(el).then(canvas => imgs.push(canvas.toDataURL('image/png')));
+      this.renderLifeDeath();
+    }
+    createGIF(
+      {
+        images: imgs,
+        gifWidth: this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize),
+        gifHeight: this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize),
+        interval: interval / 1000,
+      },
+      obj => (!obj.error ? saveAs(obj.image, 'Game of life') : console.error(obj.error))
+    );
+    this.toggleDownloadWindow();
+  };
+
+  downloadButtonHandle = () => {
+    const isPNG = document.getElementById('downloadPNG').checked ? true : false;
+    const frames = Number(document.getElementById('gifFrames').value);
+    const inval = Number(document.getElementById('gifInterval').value);
+    if (isPNG) {
+      this.downloadImg();
+      this.toggleDownloadWindow();
+    } else {
+      this.captureImgs(frames, inval);
+    }
+  };
+
   render() {
     return (
       <>
@@ -659,7 +728,7 @@ export default class GameOfLife extends Component {
                 <path d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z' />
               </svg>
             </button>
-            <button title='Download drawing' onClick={this.downloadImg}>
+            <button title='Download drawing' onClick={this.toggleDownloadWindow}>
               <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
                 <path d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z' />{' '}
               </svg>
@@ -1020,6 +1089,63 @@ export default class GameOfLife extends Component {
           </div>
           <p id='popUpText'></p>
           <button onClick={this.togglePopUp}>OK</button>
+        </div>
+
+        <div id='downloadWindow'>
+          <div
+            id='downloadWindowHeader'
+            onMouseDown={e => {
+              windowLeft = e.target.getBoundingClientRect().left - e.clientX;
+              windowTop = e.target.getBoundingClientRect().top - e.clientY;
+              window.addEventListener('mousemove', this.grabDownload);
+            }}
+          >
+            <p>Download your drawing as .png/.gif</p>
+            <button id='closeDownloadWindow' onClick={this.toggleDownloadWindow} onMouseDown={e => e.stopPropagation()}>
+              <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
+                <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
+              </svg>
+            </button>
+          </div>
+          <input
+            type='radio'
+            id='downloadPNG'
+            name='download'
+            value='png'
+            defaultChecked
+            onChange={e => {
+              const el = document.querySelectorAll('#gifDownlaodSettings input');
+              e.target.checked
+                ? el.forEach(element => (element.disabled = true))
+                : el.forEach(element => (element.disabled = false));
+            }}
+          ></input>
+          <label htmlFor='downloadPNG'>Download as png file.</label>
+          <br></br>
+          <input
+            type='radio'
+            id='downloadGIF'
+            name='download'
+            value='gif'
+            onChange={e => {
+              const el = document.querySelectorAll('#gifDownlaodSettings input');
+              e.target.checked
+                ? el.forEach(element => (element.disabled = false))
+                : el.forEach(element => (element.disabled = true));
+            }}
+          ></input>
+          <label htmlFor='downloadGIF'>Download as animated gif file.</label>
+          <div id='gifDownlaodSettings'>
+            <label htmlFor='frames'>Frames : </label>
+            <input id='gifFrames' type='number' name='frames' defaultValue='10' disabled></input>
+            <br></br>
+            <label htmlFor='interval'>Interval (ms) : </label>
+            <input id='gifInterval' type='number' name='interval' defaultValue='100' disabled></input>
+          </div>
+          <div id='downloadCancleContainer'>
+            <button onClick={this.downloadButtonHandle}>Download</button>
+            <button onClick={this.toggleDownloadWindow}>Cancle</button>
+          </div>
         </div>
 
         <div id='saveWindow'>

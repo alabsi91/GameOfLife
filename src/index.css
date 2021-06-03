@@ -91,6 +91,99 @@ p {
   color: #d7d7d7;
   font-family: system-ui;
 }
+#downloadWindow {
+  position: absolute;
+  width: 400px;
+  height: 300px;
+  left: 40vw;
+  top: 200px;
+  background-color: #1a1a1a;
+  border: solid 4px #535353;
+  border-top: none;
+  margin: auto;
+  z-index: 6;
+  text-align: left;
+  display: none;
+  box-shadow: 0px 0px 3px 0px rgb(0 0 0 / 75%);
+}
+#downloadWindowHeader {
+  width: 100%;
+  height: 20px;
+  background-color: #535353;
+}
+#downloadWindowHeader p {
+  font-size: 10px;
+  color: #d7d7d7;
+  font-family: system-ui;
+  margin: 0px;
+  margin-left: 5px;
+  padding-top: 2px;
+  float: left;
+}
+#downloadCancleContainer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50px;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+}
+#downloadCancleContainer button {
+  width: 20%;
+  padding: 0px;
+  height: 30px;
+  border-radius: 2px;
+  border: none;
+  font-weight: 200;
+  font-size: 14px;
+  background-color: #535353;
+  color: #d7d7d7;
+  cursor: pointer;
+}
+#downloadCancleContainer button:hover {
+  background-color: #454545;
+  border: solid 1px #636363;
+}
+#closeDownloadWindow {
+  padding: 0px;
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  border: none;
+  font-weight: 200;
+  font-size: 14px;
+  background-color: initial;
+  cursor: pointer;
+  float: right;
+}
+#closeDownloadWindow:hover {
+  background-color: #454545;
+}
+#gifDownlaodSettings {
+  text-align: end;
+  height: 90px;
+  margin-top: 30px;
+  margin-right: 145px;
+}
+#gifDownlaodSettings input {
+  width: 40%;
+  padding: 4px 0px;
+  border: solid 1px #636363;
+  border-radius: 2px;
+  color: #dddddd;
+  background-color: #454545;
+  margin: 10px 0px;
+}
+#downloadWindow > input {
+  margin: 15px 15px;
+}
+#downloadWindow label {
+  font-size: 14px;
+  color: #d7d7d7;
+  font-family: system-ui;
+}
 #saveWindow {
   position: absolute;
   width: 400px;
