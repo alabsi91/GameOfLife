@@ -94,7 +94,7 @@ p {
 #downloadWindow {
   position: absolute;
   width: 400px;
-  height: 300px;
+  height: 350px;
   left: 40vw;
   top: 200px;
   background-color: #1a1a1a;
@@ -167,7 +167,7 @@ p {
   margin-top: 5px;
   margin-right: 145px;
 }
-#gifDownlaodSettings input {
+#gifDownlaodSettings input[type=number] {
   width: 40%;
   padding: 4px 0px;
   border: solid 1px #636363;
@@ -175,6 +175,9 @@ p {
   color: #dddddd;
   background-color: #454545;
   margin: 10px 0px;
+}
+#gifDownlaodSettings input[type=checkbox] {
+  margin: 10px 10px;
 }
 #downloadWindow > input {
   margin: 15px 15px;

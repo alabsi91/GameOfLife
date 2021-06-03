@@ -624,7 +624,7 @@ export default class GameOfLife extends Component {
     document.querySelectorAll(`.loadCard[data-key="${i}"]`)[0].style.display = 'none';
   };
 
-  captureImgs = async (frmaes, interval, delay) => {
+  captureImgs = async (frmaes, interval, delay, backwards) => {
     const el = document.querySelector('#lifeDeathContainer');
     const imgs = [];
     for (let i = 0; i < frmaes + delay; i++) {
@@ -633,7 +633,7 @@ export default class GameOfLife extends Component {
     }
     createGIF(
       {
-        images: imgs,
+        images: backwards ? [...imgs, ...imgs.reverse()] : imgs,
         gifWidth: this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize),
         gifHeight: this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize),
         interval: interval / 1000,
@@ -645,6 +645,7 @@ export default class GameOfLife extends Component {
 
   downloadButtonHandle = () => {
     const isPNG = document.getElementById('downloadPNG').checked ? true : false;
+    const isBounce = document.getElementById('gifBounce').checked ? true : false;
     const frames = Number(document.getElementById('gifFrames').value);
     const inval = Number(document.getElementById('gifInterval').value);
     const delay = Number(document.getElementById('gifDelay').value);
@@ -652,7 +653,7 @@ export default class GameOfLife extends Component {
       this.downloadImg();
       this.toggleDownloadWindow();
     } else {
-      this.captureImgs(frames, inval, delay);
+      this.captureImgs(frames, inval, delay, isBounce);
     }
   };
 
@@ -1143,8 +1144,11 @@ export default class GameOfLife extends Component {
             <label htmlFor='interval'>Interval (ms) : </label>
             <input id='gifInterval' type='number' name='interval' defaultValue='100' disabled></input>
             <br></br>
-            <label htmlFor='interval'>Delay (frames) : </label>
-            <input id='gifDelay' type='number' name='interval' defaultValue='4' disabled></input>
+            <label htmlFor='gifDelay'>Delay (frames) : </label>
+            <input id='gifDelay' type='number' name='gifDelay' defaultValue='4' disabled></input>
+            <br></br>
+            <input id='gifBounce' type='checkbox' name='gifBounce' disabled></input>
+            <label htmlFor='gifBounce'>Bounce Back</label>
           </div>
           <div id='downloadCancleContainer'>
             <button onClick={this.downloadButtonHandle}>Download</button>
