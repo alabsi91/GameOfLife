@@ -514,7 +514,7 @@ export default class GameOfLife extends Component {
     };
     pixels.forEach(e => newSave.livePixels.push(Number(e.dataset.pos)));
     pixels.forEach(e => newSave.pixelsColors.push(window.getComputedStyle(e).backgroundColor));
-    html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 2 }).then(canvas => {
+    html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 0.5 }).then(canvas => {
       const dataURL = canvas.toDataURL('image/png');
       newSave.drawngImg = dataURL;
       if (localStorage.getItem('saved')) {

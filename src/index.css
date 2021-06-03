@@ -372,7 +372,8 @@ p {
 }
 #lifeDeathContainer {
   position: relative;
-  line-height: 0px;
+  display: inline-flex;
+  flex-wrap: wrap;
   cursor: crosshair;
   z-index: 1;
 }
