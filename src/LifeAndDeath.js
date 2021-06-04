@@ -5,7 +5,17 @@ import { saveAs } from 'file-saver';
 import { requestFrame } from 'selector_dom';
 import { createGIF } from 'gifshot';
 
-let interval, lastPaint, lastPaintColors, lastPaintGrid, windowTop, windowLeft, lineTop, lineLeft, forResize, isWindowOpened;
+let interval,
+  lastPaint,
+  lastPaintColors,
+  lastPaintGrid,
+  windowTop,
+  windowLeft,
+  lineTop,
+  lineLeft,
+  forResize,
+  isWindowOpened,
+  panelsPos;
 let undo = [];
 let redo = [];
 
@@ -43,15 +53,19 @@ export default class GameOfLife extends Component {
     }
     window.addEventListener('mouseup', () => {
       window.removeEventListener('mousemove', this.imgResize);
-      window.removeEventListener('mousemove', this.grabPanel);
       window.removeEventListener('mousemove', this.grabLayer);
       window.removeEventListener('mousemove', this.grabGrid);
       window.removeEventListener('mousemove', this.grabSave);
       window.removeEventListener('mousemove', this.grabLoad);
       window.removeEventListener('mousemove', this.grabPopUp);
       window.removeEventListener('mousemove', this.grabDownload);
+      window.removeEventListener('mousemove', this.grabPanel);
+      window.removeEventListener('mousemove', this.grabGridPanel);
+      window.removeEventListener('mousemove', this.grabColorPanel);
+      window.removeEventListener('mousemove', this.grabSavePanel);
     });
     this.keyboardShourtcuts();
+    this.readDrawing();
   }
 
   keyboardShourtcuts = () => {
@@ -73,34 +87,46 @@ export default class GameOfLife extends Component {
 
   undo = () => {
     if (undo.length > 0) {
-      undo[undo.length - 1][0] === 'Death'
-        ? undo[undo.length - 1].forEach(e => (e !== 'Death' ? this.toDeath(e) : ''))
-        : undo[undo.length - 1].forEach(e => (e !== 'Live' ? this.toLive(e) : ''));
-      redo.push(undo[undo.length - 1]);
-      undo.splice(undo.length - 1);
+      const last = undo.length - 1;
+      const pixels = document.querySelectorAll('.lifeDeathPixels');
+      pixels.forEach(e => {
+        e.style.backgroundColor = this.state.backgroundPixleColor;
+        e.dataset.live = 'false';
+      });
+      undo[last - 1]?.[0].forEach((e, i) => {
+        pixels[e].style.backgroundColor = undo[last - 1]?.[1][i];
+        pixels[e].dataset.live = 'true';
+      });
+      redo.push(undo[last]);
+      undo.splice(last, 1);
     }
   };
 
   redo = () => {
     if (redo.length > 0) {
-      redo[redo.length - 1][0] === 'Death'
-        ? redo[redo.length - 1].forEach(e => {
-            if (e !== 'Death') {
-              this.state.isRandomColor
-                ? (e.style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 40%, 1)`)
-                : (e.style.backgroundColor = this.state.pixleColor);
-              e.dataset.live = 'true';
-            }
-          })
-        : redo[redo.length - 1].forEach(e => {
-            if (e !== 'Live') {
-              e.style.backgroundColor = this.state.backgroundPixleColor;
-              e.removeAttribute('data-live');
-            }
-          });
-      undo.push(redo[redo.length - 1]);
-      redo.splice(redo.length - 1);
+      const last = redo.length - 1;
+      const pixels = document.querySelectorAll('.lifeDeathPixels');
+      pixels.forEach(e => {
+        e.style.backgroundColor = this.state.backgroundPixleColor;
+        e.dataset.live = 'false';
+      });
+      redo[last][0].forEach((e, i) => {
+        pixels[e].style.backgroundColor = redo[last][1][i];
+        pixels[e].dataset.live = 'true';
+      });
+      undo.push(redo[last]);
+      redo.splice(last, 1);
     }
+  };
+
+  readDrawing = () => {
+    const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
+    let reg = [[], []];
+    pixels.forEach(e => {
+      reg[0].push(Number(e.dataset.pos));
+      reg[1].push(window.getComputedStyle(e).backgroundColor);
+    });
+    undo.push(reg);
   };
 
   applyPattren = (patren, colors, pWidth, x, y) => {
@@ -181,16 +207,13 @@ export default class GameOfLife extends Component {
       // eslint-disable-next-line no-loop-func
       element.addEventListener('mousedown', e => {
         this.setState({ isPaused: false });
-        undo.push([]);
         redo = [];
         if (!this.state.isPlaying && !this.state.eraser) {
-          undo[undo.length - 1].push('Death');
           this.symmetricalX(i);
           this.symmetricalY(i);
           if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i));
           this.toLive(e.target);
         } else if (!this.state.isPlaying && this.state.eraser) {
-          undo[undo.length - 1].push('Live');
           this.symmetricalX(i, true);
           this.symmetricalY(i, true);
           if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i, true), true);
@@ -237,18 +260,14 @@ export default class GameOfLife extends Component {
   };
 
   toLive = e => {
-    if (e.dataset.live !== 'true') {
-      undo[undo.length - 1].push(e);
-      this.state.isRandomColor
-        ? (e.style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 40%, 1)`)
-        : (e.style.backgroundColor = this.state.pixleColor);
-      e.dataset.live = 'true';
-    }
+    this.state.isRandomColor
+      ? (e.style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 40%, 1)`)
+      : (e.style.backgroundColor = this.state.pixleColor);
+    e.dataset.live = 'true';
   };
 
   toDeath = e => {
     if (e.dataset.live === 'true') {
-      undo[undo.length - 1].push(e);
       e.style.backgroundColor = this.state.backgroundPixleColor;
       e.removeAttribute('data-live');
     }
@@ -299,7 +318,7 @@ export default class GameOfLife extends Component {
 
   resetRender = () => {
     clearInterval(interval);
-    undo.push([]);
+    this.readDrawing();
     const pixels = document.querySelectorAll('.lifeDeathPixels[data-live=true]');
     pixels.forEach(e => this.toDeath(e));
     this.setState({ isPlaying: false, isPaused: false });
@@ -320,8 +339,12 @@ export default class GameOfLife extends Component {
         this.openPopUp(`Can't retrive last paint, current grid size is smaller than ${lastPaintGrid[0]}x${lastPaintGrid[1]}`);
       } else if (lastPaintGrid[0] !== this.state.gridWidth || lastPaintGrid[1] !== this.state.gridHeight) {
         this.openPopUp(`This paint was painted orginaly on ${lastPaintGrid[0]}x${lastPaintGrid[1]} grid`);
+        this.readDrawing();
         this.applyPattren(lastPaint, lastPaintColors, lastPaintGrid[0]);
-      } else this.applyPattren(lastPaint, lastPaintColors, lastPaintGrid[0]);
+      } else {
+        this.readDrawing();
+        this.applyPattren(lastPaint, lastPaintColors, lastPaintGrid[0]);
+      }
     } else if (localStorage.getItem('lastPaint')) {
       const getLastPaint = JSON.parse(localStorage.getItem('lastPaint'));
       const getLastPaintColros = JSON.parse(localStorage.getItem('lastPaintColors'));
@@ -330,19 +353,16 @@ export default class GameOfLife extends Component {
         this.openPopUp(
           `Can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`
         );
-      } else this.applyPattren(getLastPaint, getLastPaintColros, getLastPaintGrid[0]);
+      } else {
+        this.readDrawing();
+        this.applyPattren(getLastPaint, getLastPaintColros, getLastPaintGrid[0]);
+      }
     } else this.openPopUp('Last Paint Not found');
   };
 
   trackMouse = l => {
     document.getElementById('MouseHorizenLine').style.top = `${l.clientY - lineTop}px`;
     document.getElementById('MouseVerticalLine').style.left = `${l.clientX - lineLeft}px`;
-  };
-
-  grabPanel = l => {
-    const grabEl = document.getElementById('controlPanel');
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
-    grabEl.style.left = `${l.pageX + windowLeft}px`;
   };
 
   grabGrid = l => {
@@ -364,6 +384,73 @@ export default class GameOfLife extends Component {
     const grabEl = document.getElementById('saveWindow');
     grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
     grabEl.style.left = `${l.pageX + windowLeft}px`;
+  };
+
+  grabPanel = l => {
+    const grabEl = document.getElementById('controlPanel');
+    const height = parseInt(window.getComputedStyle(grabEl).height);
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
+    panelsPos.forEach(e => {
+      if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY >= e[1] && l.pageY <= e[1] + 20) {
+        grabEl.style.top = `${e[1]}px`;
+        grabEl.style.left = `${e[0]}px`;
+      } else if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY + height <= e[3] + 20 && l.pageY + height >= e[3]) {
+        grabEl.style.top = `${e[3] - height}px`;
+        grabEl.style.left = `${e[0]}px`;
+      }
+    });
+  };
+
+  grabGridPanel = l => {
+    l.preventDefault();
+    const grabEl = document.getElementById('gridControlPanel');
+    const height = parseInt(window.getComputedStyle(grabEl).height);
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
+    panelsPos.forEach(e => {
+      if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY >= e[1] && l.pageY <= e[1] + 20) {
+        grabEl.style.top = `${e[1]}px`;
+        grabEl.style.left = `${e[0]}px`;
+      } else if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY + height <= e[3] + 20 && l.pageY + height >= e[3]) {
+        grabEl.style.top = `${e[3] - height}px`;
+        grabEl.style.left = `${e[0]}px`;
+      }
+    });
+  };
+
+  grabColorPanel = l => {
+    l.preventDefault();
+    const grabEl = document.getElementById('colorControlPanel');
+    const height = parseInt(window.getComputedStyle(grabEl).height);
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
+    panelsPos.forEach(e => {
+      if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY >= e[1] && l.pageY <= e[1] + 20) {
+        grabEl.style.top = `${e[1]}px`;
+        grabEl.style.left = `${e[0]}px`;
+      } else if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY + height <= e[3] + 20 && l.pageY + height >= e[3]) {
+        grabEl.style.top = `${e[3] - height}px`;
+        grabEl.style.left = `${e[0]}px`;
+      }
+    });
+  };
+
+  grabSavePanel = l => {
+    l.preventDefault();
+    const grabEl = document.getElementById('saveControlPanel');
+    const height = parseInt(window.getComputedStyle(grabEl).height);
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
+    panelsPos.forEach(e => {
+      if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY >= e[1] && l.pageY <= e[1] + 20) {
+        grabEl.style.top = `${e[1]}px`;
+        grabEl.style.left = `${e[0]}px`;
+      } else if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY + height <= e[3] + 20 && l.pageY + height >= e[3]) {
+        grabEl.style.top = `${e[3] - height}px`;
+        grabEl.style.left = `${e[0]}px`;
+      }
+    });
   };
 
   grabLoad = l => {
@@ -637,7 +724,7 @@ export default class GameOfLife extends Component {
       for (let i = imgs.length - 1; i >= 0; i--) revArray.push(imgs[i]);
       imgs.push(...revArray);
     }
-    
+
     createGIF(
       {
         images: imgs,
@@ -667,14 +754,31 @@ export default class GameOfLife extends Component {
     }
   };
 
+  findPanelsPos = () => {
+    const panels = [
+      document.getElementById('controlPanel').getBoundingClientRect(),
+      document.getElementById('gridControlPanel').getBoundingClientRect(),
+      document.getElementById('colorControlPanel').getBoundingClientRect(),
+      document.getElementById('saveControlPanel').getBoundingClientRect(),
+    ];
+    const pos = panels.map(e => [
+      e.left + window.scrollX,
+      e.bottom + window.scrollY,
+      e.right + window.scrollX,
+      e.top + window.scrollY,
+    ]);
+    panelsPos = pos;
+  };
+
   render() {
     return (
       <>
-        <div id='controlPanel'>
+        <div id='controlPanel' className='controlPanel'>
           <div
             id='grabPad'
             onMouseDown={e => {
               const el = document.getElementById('controlPanel');
+              this.findPanelsPos();
               windowLeft = el.getBoundingClientRect().left - e.clientX;
               windowTop = el.getBoundingClientRect().top - e.clientY;
               window.addEventListener('mousemove', this.grabPanel);
@@ -691,61 +795,7 @@ export default class GameOfLife extends Component {
               <path d='M20,9H4v2h16V9z M4,15h16v-2H4V15z' />
             </svg>
           </div>
-          <div className='devider'></div>
-          <div className='twoButtonsContainer'>
-            <button onClick={this.undo} title='undo (Ctrl + z)'>
-              <svg
-                xmlns='http://www.w3.org/2000/svg'
-                enableBackground='new 0 0 24 24'
-                height='20px'
-                viewBox='0 0 24 24'
-                width='20px'
-                fill='#D7D7D7'
-              >
-                <path d='M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z' />
-              </svg>
-            </button>
-            <button onClick={this.redo} title='redo (Ctrl + y)'>
-              <svg
-                xmlns='http://www.w3.org/2000/svg'
-                enableBackground='new 0 0 24 24'
-                height='20px'
-                viewBox='0 0 24 24'
-                width='20px'
-                fill='#D7D7D7'
-              >
-                <path d='M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z' />
-              </svg>
-            </button>
-          </div>
 
-          <div className='devider'></div>
-          <div className='twoButtonsContainer'>
-            <button title='Save drawing' onClick={this.toggleSaveWindow}>
-              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
-                <path d='M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z' />{' '}
-              </svg>
-            </button>
-            <button title='Load drawing' onClick={this.toggleLoadWindow}>
-              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
-                <path d='M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z' />{' '}
-              </svg>
-            </button>
-          </div>
-
-          <div className='devider'></div>
-          <div className='twoButtonsContainer'>
-            <button title='Copy drawing to Clipboard' onClick={this.copyToClipBoard}>
-              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
-                <path d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z' />
-              </svg>
-            </button>
-            <button title='Download drawing' onClick={this.toggleDownloadWindow}>
-              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
-                <path d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z' />{' '}
-              </svg>
-            </button>
-          </div>
           <div className='devider'></div>
 
           <button
@@ -903,7 +953,68 @@ export default class GameOfLife extends Component {
 
           <p className='controlLabel'>Speed</p>
           <div className='devider'></div>
+          <select
+            title='Insert Patrens'
+            disabled={this.state.isPlaying}
+            onChange={e => {
+              const value = e.target.value;
+              if (this.state.gridWidth < 45 || this.state.gridHeight < 45) {
+                this.openPopUp('This patren requiers a 45x45 grid and greater');
+              } else if (value === 'simkinGliderGun') {
+                this.applyPattren(pattrens[value], undefined, 60, 0, 1);
+              } else if (value === 'PentaDecathlon') {
+                this.applyPattren(pattrens[value], undefined, 60, 4, 8);
+              } else if (value === 'pulsar') {
+                this.applyPattren(pattrens[value], undefined, 60, 7, 7);
+              } else if (value === 'LightWeightSpaceship') {
+                this.applyPattren(pattrens[value], undefined, 60, 0, 2);
+              } else if (value === 'MiddleWeightSpaceship') {
+                this.applyPattren(pattrens[value], undefined, 60, 0, 3);
+              } else if (value === 'HeavyWeightSpaceship') {
+                this.applyPattren(pattrens[value], undefined, 60, 0, 3);
+              } else if (value === 'omarDrawing') {
+                this.applyPattren(pattrens[value], undefined, 60, 4, 2);
+              } else if (value === 'heart') {
+                this.applyPattren(pattrens[value], undefined, 60, 1, 2);
+              } else if (value !== '---') this.applyPattren(pattrens[value], undefined, 60);
+            }}
+          >
+            <option value='---'>---</option>
+            <option value='heart'>Heart</option>
+            <option value='gliderGun'>Glider Gun</option>
+            <option value='simkinGliderGun'>Simkin Glider Gun</option>
+            <option value='LightWeightSpaceship'>Light Weight Spaceship</option>
+            <option value='MiddleWeightSpaceship'>Middle Weight Spaceship</option>
+            <option value='HeavyWeightSpaceship'>Heavy Weight Spaceship</option>
+            <option value='PentaDecathlon'>Penta Decathlon</option>
+            <option value='pulsar'>Pulsar</option>
+            <option value='omarDrawing'>Omar's Drawing</option>
+          </select>
+          <p className='controlLabel'>Pattrens</p>
+        </div>
 
+        <div id='gridControlPanel' className='controlPanel'>
+          <div
+            id='grabPad'
+            onMouseDown={e => {
+              const el = document.getElementById('gridControlPanel').getBoundingClientRect();
+              this.findPanelsPos();
+              windowLeft = el.left - e.clientX;
+              windowTop = el.top - e.clientY;
+              window.addEventListener('mousemove', this.grabGridPanel);
+            }}
+          >
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              enableBackground='new 0 0 24 24'
+              height='24px'
+              viewBox='0 0 24 24'
+              width='24px'
+              fill='#D7D7D7'
+            >
+              <path d='M20,9H4v2h16V9z M4,15h16v-2H4V15z' />
+            </svg>
+          </div>
           <input
             className='inputNumber'
             type='number'
@@ -978,8 +1089,30 @@ export default class GameOfLife extends Component {
             }}
           ></input>
           <p className='controlLabel'>Grid Lines</p>
-          <div className='devider'></div>
+        </div>
 
+        <div id='colorControlPanel' className='controlPanel'>
+          <div
+            id='grabPad'
+            onMouseDown={e => {
+              const el = document.getElementById('colorControlPanel').getBoundingClientRect();
+              this.findPanelsPos();
+              windowLeft = el.left - e.clientX;
+              windowTop = el.top - e.clientY;
+              window.addEventListener('mousemove', this.grabColorPanel);
+            }}
+          >
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              enableBackground='new 0 0 24 24'
+              height='24px'
+              viewBox='0 0 24 24'
+              width='24px'
+              fill='#D7D7D7'
+            >
+              <path d='M20,9H4v2h16V9z M4,15h16v-2H4V15z' />
+            </svg>
+          </div>
           <button
             className='buttons'
             style={{
@@ -1042,45 +1175,85 @@ export default class GameOfLife extends Component {
             }}
           ></input>
           <p className='controlLabel'>Sym- Lines</p>
-          <div className='devider'></div>
-          <select
-            title='Insert Patrens'
-            disabled={this.state.isPlaying}
-            onChange={e => {
-              const value = e.target.value;
-              if (this.state.gridWidth < 45 || this.state.gridHeight < 45) {
-                this.openPopUp('This patren requiers a 45x45 grid and greater');
-              } else if (value === 'simkinGliderGun') {
-                this.applyPattren(pattrens[value], undefined, 60, 0, 1);
-              } else if (value === 'PentaDecathlon') {
-                this.applyPattren(pattrens[value], undefined, 60, 4, 8);
-              } else if (value === 'pulsar') {
-                this.applyPattren(pattrens[value], undefined, 60, 7, 7);
-              } else if (value === 'LightWeightSpaceship') {
-                this.applyPattren(pattrens[value], undefined, 60, 0, 2);
-              } else if (value === 'MiddleWeightSpaceship') {
-                this.applyPattren(pattrens[value], undefined, 60, 0, 3);
-              } else if (value === 'HeavyWeightSpaceship') {
-                this.applyPattren(pattrens[value], undefined, 60, 0, 3);
-              } else if (value === 'omarDrawing') {
-                this.applyPattren(pattrens[value], undefined, 60, 4, 2);
-              } else if (value === 'heart') {
-                this.applyPattren(pattrens[value], undefined, 60, 1, 2);
-              } else if (value !== '---') this.applyPattren(pattrens[value], undefined, 60);
+        </div>
+
+        <div id='saveControlPanel' className='controlPanel'>
+          <div
+            id='grabPad'
+            onMouseDown={e => {
+              const el = document.getElementById('saveControlPanel').getBoundingClientRect();
+              this.findPanelsPos();
+              windowLeft = el.left - e.clientX;
+              windowTop = el.top - e.clientY;
+              window.addEventListener('mousemove', this.grabSavePanel);
             }}
           >
-            <option value='---'>---</option>
-            <option value='heart'>Heart</option>
-            <option value='gliderGun'>Glider Gun</option>
-            <option value='simkinGliderGun'>Simkin Glider Gun</option>
-            <option value='LightWeightSpaceship'>Light Weight Spaceship</option>
-            <option value='MiddleWeightSpaceship'>Middle Weight Spaceship</option>
-            <option value='HeavyWeightSpaceship'>Heavy Weight Spaceship</option>
-            <option value='PentaDecathlon'>Penta Decathlon</option>
-            <option value='pulsar'>Pulsar</option>
-            <option value='omarDrawing'>Omar's Drawing</option>
-          </select>
-          <p className='controlLabel'>Pattrens</p>
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              enableBackground='new 0 0 24 24'
+              height='24px'
+              viewBox='0 0 24 24'
+              width='24px'
+              fill='#D7D7D7'
+            >
+              <path d='M20,9H4v2h16V9z M4,15h16v-2H4V15z' />
+            </svg>
+          </div>
+          <div className='devider'></div>
+          <div className='twoButtonsContainer'>
+            <button onClick={this.undo} title='undo (Ctrl + z)'>
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                enableBackground='new 0 0 24 24'
+                height='20px'
+                viewBox='0 0 24 24'
+                width='20px'
+                fill='#D7D7D7'
+              >
+                <path d='M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z' />
+              </svg>
+            </button>
+            <button onClick={this.redo} title='redo (Ctrl + y)'>
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                enableBackground='new 0 0 24 24'
+                height='20px'
+                viewBox='0 0 24 24'
+                width='20px'
+                fill='#D7D7D7'
+              >
+                <path d='M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z' />
+              </svg>
+            </button>
+          </div>
+
+          <div className='devider'></div>
+          <div className='twoButtonsContainer'>
+            <button title='Save drawing' onClick={this.toggleSaveWindow}>
+              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
+                <path d='M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z' />{' '}
+              </svg>
+            </button>
+            <button title='Load drawing' onClick={this.toggleLoadWindow}>
+              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
+                <path d='M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z' />{' '}
+              </svg>
+            </button>
+          </div>
+
+          <div className='devider'></div>
+          <div className='twoButtonsContainer'>
+            <button title='Copy drawing to Clipboard' onClick={this.copyToClipBoard}>
+              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
+                <path d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z' />
+              </svg>
+            </button>
+            <button title='Download drawing' onClick={this.toggleDownloadWindow}>
+              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#D7D7D7'>
+                <path d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z' />{' '}
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div id='popUp'>
@@ -1310,6 +1483,7 @@ export default class GameOfLife extends Component {
             }}
             onMouseUp={() => {
               this.setState({ drwaMode: false });
+              this.readDrawing();
             }}
             onMouseLeave={() => {
               this.setState({ drwaMode: false });
