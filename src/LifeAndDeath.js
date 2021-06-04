@@ -95,7 +95,7 @@ export default class GameOfLife extends Component {
       const pixels = document.querySelectorAll('.lifeDeathPixels');
       pixels.forEach(e => {
         e.style.backgroundColor = this.state.backgroundPixleColor;
-        e.dataset.live = 'false';
+        e.removeAttribute('data-live');
       });
       undo[last - 1]?.[0].forEach((e, i) => {
         pixels[e].style.backgroundColor = undo[last - 1]?.[1][i];
@@ -112,7 +112,7 @@ export default class GameOfLife extends Component {
       const pixels = document.querySelectorAll('.lifeDeathPixels');
       pixels.forEach(e => {
         e.style.backgroundColor = this.state.backgroundPixleColor;
-        e.dataset.live = 'false';
+        e.removeAttribute('data-live');
       });
       redo[last][0].forEach((e, i) => {
         pixels[e].style.backgroundColor = redo[last][1][i];
@@ -777,9 +777,11 @@ export default class GameOfLife extends Component {
 
   paintBuc = i => {
     const pixels = document.querySelectorAll('.lifeDeathPixels');
+    const correntColor = window.getComputedStyle(pixels[i]).backgroundColor;
     const width = this.state.gridWidth;
     const height = this.state.gridHeight;
-    const isDead = d => this.state.eraser ? pixels[d].dataset.live === 'true' : pixels[d].dataset.live !== 'true';
+    const isDead = d => window.getComputedStyle(pixels[d]).backgroundColor === correntColor;
+    // const isDead = d => this.state.eraser ? pixels[d].dataset.live === 'true' : pixels[d].dataset.live !== 'true';
     const firstPixle = f => ~~(f / this.state.gridWidth) * this.state.gridWidth;
     const lastPixle = l => ~~(l / this.state.gridWidth) * this.state.gridWidth + this.state.gridWidth - 1;
     const bottomPixel = b => ~~(b / this.state.gridWidth) !== height;
