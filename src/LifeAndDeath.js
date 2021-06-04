@@ -28,6 +28,7 @@ export default class GameOfLife extends Component {
     symmetricalX: false,
     symmetricalY: false,
     eraser: false,
+    paintBuc: false,
     speed: localStorage.getItem('speed') ? Number(localStorage.getItem('speed')) : 100,
     pixelSize: localStorage.getItem('pixelSize') ? Number(localStorage.getItem('pixelSize')) : 15,
     gridWidth: localStorage.getItem('gridWidth') ? Number(localStorage.getItem('gridWidth')) : 90,
@@ -80,6 +81,9 @@ export default class GameOfLife extends Component {
         } else if (e.key.toLowerCase() === 'e' && !this.state.drwaMode) {
           document.querySelectorAll('input[type="number"').forEach(e => e.blur());
           this.state.eraser ? this.setState({ eraser: false }) : this.setState({ eraser: true });
+        } else if (e.key.toLowerCase() === 'b' && !this.state.drwaMode) {
+          document.querySelectorAll('input[type="number"').forEach(e => e.blur());
+          this.state.paintBuc ? this.setState({ paintBuc: false }) : this.setState({ paintBuc: true });
         }
       }
     });
@@ -192,10 +196,11 @@ export default class GameOfLife extends Component {
       element.style.height = this.state.pixelSize + 'px';
 
       element.addEventListener('mouseenter', e => {
-        if (this.state.drwaMode && !this.state.eraser) {
+        if (this.state.drwaMode && !this.state.eraser && !this.state.paintBuc) {
           this.symmetricalX(i);
           this.symmetricalY(i);
           if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i));
+
           this.toLive(e.target);
         } else if (this.state.drwaMode && this.state.eraser) {
           this.symmetricalX(i, true);
@@ -208,17 +213,17 @@ export default class GameOfLife extends Component {
       element.addEventListener('mousedown', e => {
         this.setState({ isPaused: false });
         redo = [];
-        if (!this.state.isPlaying && !this.state.eraser) {
+        if (!this.state.isPlaying && !this.state.eraser && !this.state.paintBuc) {
           this.symmetricalX(i);
           this.symmetricalY(i);
           if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i));
           this.toLive(e.target);
-        } else if (!this.state.isPlaying && this.state.eraser) {
+        } else if (!this.state.isPlaying && this.state.eraser && !this.state.paintBuc) {
           this.symmetricalX(i, true);
           this.symmetricalY(i, true);
           if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i, true), true);
           this.toDeath(e.target);
-        }
+        } else if (this.state.paintBuc) this.paintBuc(i);
       });
       container.appendChild(element);
     }
@@ -770,6 +775,43 @@ export default class GameOfLife extends Component {
     panelsPos = pos;
   };
 
+  paintBuc = i => {
+    const pixels = document.querySelectorAll('.lifeDeathPixels');
+    const width = this.state.gridWidth;
+    const height = this.state.gridHeight;
+    const isDead = d => this.state.eraser ? pixels[d].dataset.live === 'true' : pixels[d].dataset.live !== 'true';
+    const firstPixle = f => ~~(f / this.state.gridWidth) * this.state.gridWidth;
+    const lastPixle = l => ~~(l / this.state.gridWidth) * this.state.gridWidth + this.state.gridWidth - 1;
+    const bottomPixel = b => ~~(b / this.state.gridWidth) !== height;
+    const rightLoop = e => {
+      for (let x = e; x <= lastPixle(e) && isDead(x); x++) {
+        if (this.state.eraser) {
+          pixels[x].style.backgroundColor = this.state.backgroundPixleColor;
+          pixels[x].removeAttribute('data-live');
+        } else {
+          pixels[x].style.backgroundColor = this.state.pixleColor;
+          pixels[x].dataset.live = 'true';
+        }
+      }
+    };
+    const leftLoop = e => {
+      for (let x = e; x >= firstPixle(e) && isDead(x); x--) {
+        if (this.state.eraser) {
+          pixels[x].style.backgroundColor = this.state.backgroundPixleColor;
+          pixels[x].removeAttribute('data-live');
+        } else {
+          pixels[x].style.backgroundColor = this.state.pixleColor;
+          pixels[x].dataset.live = 'true';
+        }
+      }
+    };
+
+    for (let x = i; bottomPixel(x) && isDead(x); x = x + width) leftLoop(x);
+    for (let x = i + 1; bottomPixel(x) && isDead(x); x = x + width) rightLoop(x);
+    for (let x = i - width; x > 0 && isDead(x); x = x - width) leftLoop(x);
+    for (let x = i - width + 1; x > 0 && isDead(x); x = x - width) rightLoop(x);
+  };
+
   render() {
     return (
       <>
@@ -867,6 +909,28 @@ export default class GameOfLife extends Component {
               fill='#D7D7D7'
             >
               <path d='M5.662 23l-5.369-5.365c-.195-.195-.293-.45-.293-.707 0-.256.098-.512.293-.707l14.929-14.928c.195-.194.451-.293.707-.293.255 0 .512.099.707.293l7.071 7.073c.196.195.293.451.293.708 0 .256-.097.511-.293.707l-11.216 11.219h5.514v2h-12.343zm3.657-2l-5.486-5.486-1.419 1.414 4.076 4.072h2.829zm.456-11.429l-4.528 4.528 5.658 5.659 4.527-4.53-5.657-5.657z' />
+            </svg>
+          </button>
+
+          <button
+            className='buttons'
+            style={{
+              backgroundColor: this.state.paintBuc ? '#383838' : 'initial',
+              border: this.state.paintBuc ? 'solid 1px #636363' : 'none',
+            }}
+            title='Fill Bucket (b)'
+            onClick={() => (this.state.paintBuc ? this.setState({ paintBuc: false }) : this.setState({ paintBuc: true }))}
+          >
+            <svg
+              viewBox='0 0 24 24'
+              width='24'
+              height='24'
+              xmlns='http://www.w3.org/2000/svg'
+              fillRule='evenodd'
+              clipRule='evenodd'
+              fill='#D7D7D7'
+            >
+              <path d='M21.143 9.667c-.733-1.392-1.914-3.05-3.617-4.753-2.977-2.978-5.478-3.914-6.785-3.914-.414 0-.708.094-.86.246l-1.361 1.36c-1.899-.236-3.42.106-4.294.983-.876.875-1.164 2.159-.792 3.523.492 1.806 2.305 4.049 5.905 5.375.038.323.157.638.405.885.588.588 1.535.586 2.121 0s.588-1.533.002-2.119c-.588-.587-1.537-.588-2.123-.001l-.17.256c-2.031-.765-3.395-1.828-4.232-2.9l3.879-3.875c.496 2.73 6.432 8.676 9.178 9.178l-7.115 7.107c-.234.153-2.798-.316-6.156-3.675-3.393-3.393-3.175-5.271-3.027-5.498l1.859-1.856c-.439-.359-.925-1.103-1.141-1.689l-2.134 2.131c-.445.446-.685 1.064-.685 1.82 0 1.634 1.121 3.915 3.713 6.506 2.764 2.764 5.58 4.243 7.432 4.243.648 0 1.18-.195 1.547-.562l8.086-8.078c.91.874-.778 3.538-.778 4.648 0 1.104.896 1.999 2 1.999 1.105 0 2-.896 2-2 0-3.184-1.425-6.81-2.857-9.34zm-16.209-5.371c.527-.53 1.471-.791 2.656-.761l-3.209 3.206c-.236-.978-.049-1.845.553-2.445zm9.292 4.079l-.03-.029c-1.292-1.292-3.803-4.356-3.096-5.063.715-.715 3.488 1.521 5.062 3.096.862.862 2.088 2.247 2.937 3.458-1.717-1.074-3.491-1.469-4.873-1.462z' />
             </svg>
           </button>
 

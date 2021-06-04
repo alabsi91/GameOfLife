@@ -520,7 +520,7 @@ p {
 }
 .controlPanel {
   position: absolute;
-  top: 151px;
+  top: 15px;
   left: 30px;
   border: solid 1px #424242;
   display: flex;
@@ -534,14 +534,17 @@ p {
   box-shadow: 0px 0px 2px 0px rgb(0 0 0 / 75%);
   z-index: 5;
 }
+#controlPanel {
+  left: 82px;
+}
 #saveControlPanel {
   top: 15px;
 }
 #gridControlPanel {
-  top: 530px;
+  top: 151px;
 }
 #colorControlPanel {
-  top: 727px;
+  top: 348px;
 }
 .inputNumber {
   cursor: initial;
