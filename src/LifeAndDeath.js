@@ -645,37 +645,54 @@ export default class GameOfLife extends Component {
     const correntColor = window.getComputedStyle(pixels[i]).backgroundColor;
     const width = this.state.gridWidth;
     const height = this.state.gridHeight;
-    const isDead = d => window.getComputedStyle(pixels[d]).backgroundColor === correntColor;
-    const firstPixle = f => ~~(f / this.state.gridWidth) * this.state.gridWidth;
-    const lastPixle = l => ~~(l / this.state.gridWidth) * this.state.gridWidth + this.state.gridWidth - 1;
-    const bottomPixel = b => ~~(b / this.state.gridWidth) !== height;
-    const rightLoop = e => {
-      for (let x = e; x <= lastPixle(e) && isDead(x); x++) {
-        if (this.state.eraser) {
-          pixels[x].style.backgroundColor = this.state.backgroundPixleColor;
-          pixels[x].removeAttribute('data-live');
-        } else {
-          pixels[x].style.backgroundColor = this.state.pixleColor;
-          pixels[x].dataset.live = 'true';
-        }
-      }
+    const isEmpty = d => {
+      if (
+        pixels[d] &&
+        this.state.eraser &&
+        pixels[d].dataset.live === 'true' &&
+        window.getComputedStyle(pixels[d]).backgroundColor === correntColor
+      ) {
+        return true;
+      } else if (pixels[d] && !this.state.eraser && window.getComputedStyle(pixels[d]).backgroundColor === correntColor) {
+        return true;
+      } else return false;
     };
-    const leftLoop = e => {
-      for (let x = e; x >= firstPixle(e) && isDead(x); x--) {
-        if (this.state.eraser) {
-          pixels[x].style.backgroundColor = this.state.backgroundPixleColor;
-          pixels[x].removeAttribute('data-live');
-        } else {
-          pixels[x].style.backgroundColor = this.state.pixleColor;
-          pixels[x].dataset.live = 'true';
-        }
+
+    const toDraw = x => {
+      if (this.state.eraser) {
+        pixels[x].style.backgroundColor = this.state.backgroundPixleColor;
+        pixels[x].removeAttribute('data-live');
+      } else {
+        pixels[x].style.backgroundColor = this.state.pixleColor;
+        pixels[x].dataset.live = 'true';
       }
     };
 
-    for (let x = i; bottomPixel(x) && isDead(x); x = x + width) leftLoop(x);
-    for (let x = i + 1; bottomPixel(x) && isDead(x); x = x + width) rightLoop(x);
-    for (let x = i - width; x > 0 && isDead(x); x = x - width) leftLoop(x);
-    for (let x = i - width + 1; x > 0 && isDead(x); x = x - width) rightLoop(x);
+    const checkAround = x => {
+      const next = x + 1;
+      const previous = x - 1;
+      const up = x - width;
+      const down = x + width;
+      if (isEmpty(next) && !Number.isInteger((i + 1) / width)) {
+        toDraw(next);
+        checkAround(next);
+      }
+      if (isEmpty(previous) && !Number.isInteger(i / width)) {
+        toDraw(previous);
+        checkAround(previous);
+      }
+      if (isEmpty(up) && ~~(i / width) !== 0) {
+        toDraw(up);
+        checkAround(up);
+      }
+      if (isEmpty(down) && ~~(i / this.state.gridWidth) !== height) {
+        toDraw(down);
+        checkAround(down);
+      }
+    };
+
+    checkAround(i);
+    // console.log(isEmpty(i))
   };
 
   render() {
