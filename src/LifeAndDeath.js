@@ -52,19 +52,20 @@ export default class GameOfLife extends Component {
         );
       } else this.applyPattren(getLastPaint, getLastPaintColros, getLastPaintGrid[0]);
     }
-    window.addEventListener('mouseup', () => {
-      window.removeEventListener('mousemove', this.imgResize);
-      window.removeEventListener('mousemove', this.grabLayer);
-      window.removeEventListener('mousemove', this.grabGrid);
-      window.removeEventListener('mousemove', this.grabSave);
-      window.removeEventListener('mousemove', this.grabLoad);
-      window.removeEventListener('mousemove', this.grabPopUp);
-      window.removeEventListener('mousemove', this.grabDownload);
-      window.removeEventListener('mousemove', this.grabPanel);
-      window.removeEventListener('mousemove', this.grabGridPanel);
-      window.removeEventListener('mousemove', this.grabColorPanel);
-      window.removeEventListener('mousemove', this.grabSavePanel);
-    });
+    const grabHandles = [
+      this.imgResize,
+      this.grabLayer,
+      this.grabGrid,
+      this.grabSave,
+      this.grabLoad,
+      this.grabPopUp,
+      this.grabDownload,
+      this.grabPanel,
+      this.grabGridPanel,
+      this.grabColorPanel,
+      this.grabSavePanel,
+    ];
+    window.addEventListener('mouseup', () => grabHandles.forEach(e => window.removeEventListener('mousemove', e)));
     this.keyboardShourtcuts();
     this.readDrawing();
   }
@@ -370,114 +371,47 @@ export default class GameOfLife extends Component {
     document.getElementById('MouseVerticalLine').style.left = `${l.clientX - lineLeft}px`;
   };
 
-  grabGrid = l => {
-    l.preventDefault();
-    const grabEl = document.getElementById('windowContainer');
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
-    grabEl.style.left = `${l.pageX + windowLeft}px`;
-  };
-
-  grabLayer = l => {
-    l.preventDefault();
-    const grabEl = document.getElementById('imageLayer');
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
-    grabEl.style.left = `${l.pageX + windowLeft}px`;
-  };
-
-  grabSave = l => {
-    l.preventDefault();
-    const grabEl = document.getElementById('saveWindow');
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
-    grabEl.style.left = `${l.pageX + windowLeft}px`;
-  };
-
-  grabPanel = l => {
-    const grabEl = document.getElementById('controlPanel');
+  stickyGrapHandle = (l, el) => {
+    const grabEl = document.getElementById(el);
     const height = parseInt(window.getComputedStyle(grabEl).height);
+    const width = parseInt(window.getComputedStyle(grabEl).width);
     grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
     grabEl.style.left = `${l.pageX + windowLeft}px`;
     panelsPos.forEach(e => {
+      const recLeft = grabEl.getBoundingClientRect().left + window.scrollX;
+      const recRight = grabEl.getBoundingClientRect().right + window.scrollX;
       if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY >= e[1] && l.pageY <= e[1] + 20) {
         grabEl.style.top = `${e[1]}px`;
         grabEl.style.left = `${e[0]}px`;
       } else if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY + height <= e[3] + 20 && l.pageY + height >= e[3]) {
         grabEl.style.top = `${e[3] - height}px`;
         grabEl.style.left = `${e[0]}px`;
+      } else if (recLeft >= e[2] - 10 && recLeft <= e[2] + 10) {
+        if (l.pageY >= e[3] && l.pageY <= e[3] + 20) grabEl.style.top = `${e[3]}px`;
+        grabEl.style.left = `${e[2]}px`;
+      } else if (recRight >= e[0] - 10 && recRight <= e[0]) {
+        if (l.pageY >= e[3] && l.pageY <= e[3] + 20) grabEl.style.top = `${e[3]}px`;
+        grabEl.style.left = `${e[0] - width}px`;
       }
     });
   };
+  grabPanel = l => this.stickyGrapHandle(l, 'controlPanel');
+  grabGridPanel = l => this.stickyGrapHandle(l, 'gridControlPanel');
+  grabColorPanel = l => this.stickyGrapHandle(l, 'colorControlPanel');
+  grabSavePanel = l => this.stickyGrapHandle(l, 'saveControlPanel');
 
-  grabGridPanel = l => {
+  grabWindowHandel = (l, el) => {
     l.preventDefault();
-    const grabEl = document.getElementById('gridControlPanel');
-    const height = parseInt(window.getComputedStyle(grabEl).height);
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
-    grabEl.style.left = `${l.pageX + windowLeft}px`;
-    panelsPos.forEach(e => {
-      if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY >= e[1] && l.pageY <= e[1] + 20) {
-        grabEl.style.top = `${e[1]}px`;
-        grabEl.style.left = `${e[0]}px`;
-      } else if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY + height <= e[3] + 20 && l.pageY + height >= e[3]) {
-        grabEl.style.top = `${e[3] - height}px`;
-        grabEl.style.left = `${e[0]}px`;
-      }
-    });
-  };
-
-  grabColorPanel = l => {
-    l.preventDefault();
-    const grabEl = document.getElementById('colorControlPanel');
-    const height = parseInt(window.getComputedStyle(grabEl).height);
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
-    grabEl.style.left = `${l.pageX + windowLeft}px`;
-    panelsPos.forEach(e => {
-      if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY >= e[1] && l.pageY <= e[1] + 20) {
-        grabEl.style.top = `${e[1]}px`;
-        grabEl.style.left = `${e[0]}px`;
-      } else if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY + height <= e[3] + 20 && l.pageY + height >= e[3]) {
-        grabEl.style.top = `${e[3] - height}px`;
-        grabEl.style.left = `${e[0]}px`;
-      }
-    });
-  };
-
-  grabSavePanel = l => {
-    l.preventDefault();
-    const grabEl = document.getElementById('saveControlPanel');
-    const height = parseInt(window.getComputedStyle(grabEl).height);
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
-    grabEl.style.left = `${l.pageX + windowLeft}px`;
-    panelsPos.forEach(e => {
-      if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY >= e[1] && l.pageY <= e[1] + 20) {
-        grabEl.style.top = `${e[1]}px`;
-        grabEl.style.left = `${e[0]}px`;
-      } else if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY + height <= e[3] + 20 && l.pageY + height >= e[3]) {
-        grabEl.style.top = `${e[3] - height}px`;
-        grabEl.style.left = `${e[0]}px`;
-      }
-    });
-  };
-
-  grabLoad = l => {
-    l.preventDefault();
-    const grabEl = document.getElementById('loadWindow');
+    const grabEl = document.getElementById(el);
     grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
     grabEl.style.left = `${l.pageX + windowLeft}px`;
   };
-
-  grabDownload = l => {
-    l.preventDefault();
-    const grabEl = document.getElementById('downloadWindow');
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
-    grabEl.style.left = `${l.pageX + windowLeft}px`;
-  };
-
-  grabPopUp = l => {
-    l.preventDefault();
-    const grabEl = document.getElementById('popUp');
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
-    grabEl.style.left = `${l.pageX + windowLeft}px`;
-  };
+  grabGrid = l => this.grabWindowHandel(l, 'windowContainer');
+  grabLayer = l => this.grabWindowHandel(l, 'imageLayer');
+  grabSave = l => this.grabWindowHandel(l, 'saveWindow');
+  grabLoad = l => this.grabWindowHandel(l, 'loadWindow');
+  grabDownload = l => this.grabWindowHandel(l, 'downloadWindow');
+  grabPopUp = l => this.grabWindowHandel(l, 'popUp');
 
   copyToClipBoard = () => {
     this.pauseRender();
@@ -509,8 +443,8 @@ export default class GameOfLife extends Component {
     document.getElementById('img').style.height = 'auto';
   };
 
-  toggleSaveWindow = () => {
-    const winEl = document.getElementById('saveWindow');
+  toggleWindowHandle = el => {
+    const winEl = document.getElementById(el);
     const blured = document.getElementById('blured');
     const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
     if (isOpen) {
@@ -533,90 +467,10 @@ export default class GameOfLife extends Component {
       isWindowOpened = true;
     }
   };
-
-  toggleLoadWindow = () => {
-    const winEl = document.getElementById('loadWindow');
-    const blured = document.getElementById('blured');
-    const saved = JSON.parse(localStorage.getItem('saved'));
-    saved
-      ? (document.getElementById('noLoads').style.display = 'none')
-      : (document.getElementById('noLoads').style.display = 'block');
-    const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
-    if (isOpen) {
-      requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
-        blured.style.opacity = s;
-        if (s === 0) {
-          winEl.style.display = 'none';
-          blured.style.display = 'none';
-        }
-      });
-      isWindowOpened = false;
-    } else {
-      winEl.style.display = 'initial';
-      blured.style.display = 'block';
-      requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
-        blured.style.opacity = s;
-      });
-      isWindowOpened = true;
-    }
-  };
-
-  toggleDownloadWindow = () => {
-    const winEl = document.getElementById('downloadWindow');
-    const blured = document.getElementById('blured');
-    const saved = JSON.parse(localStorage.getItem('saved'));
-    saved
-      ? (document.getElementById('noLoads').style.display = 'none')
-      : (document.getElementById('noLoads').style.display = 'block');
-    const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
-    if (isOpen) {
-      requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
-        blured.style.opacity = s;
-        if (s === 0) {
-          winEl.style.display = 'none';
-          blured.style.display = 'none';
-        }
-      });
-      isWindowOpened = false;
-    } else {
-      winEl.style.display = 'initial';
-      blured.style.display = 'block';
-      requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
-        blured.style.opacity = s;
-      });
-      isWindowOpened = true;
-    }
-  };
-
-  togglePopUp = () => {
-    const winEl = document.getElementById('popUp');
-    const blured = document.getElementById('blured');
-    const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
-    if (isOpen) {
-      requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
-        blured.style.opacity = s;
-        if (s === 0) {
-          winEl.style.display = 'none';
-          blured.style.display = 'none';
-        }
-      });
-
-      isWindowOpened = false;
-    } else {
-      winEl.style.display = 'initial';
-      blured.style.display = 'block';
-      requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
-        blured.style.opacity = s;
-      });
-      isWindowOpened = true;
-    }
-  };
+  toggleSaveWindow = () => this.toggleWindowHandle('saveWindow');
+  toggleLoadWindow = () => this.toggleWindowHandle('loadWindow');
+  toggleDownloadWindow = () => this.toggleWindowHandle('downloadWindow');
+  togglePopUp = () => this.toggleWindowHandle('popUp');
 
   openPopUp = t => {
     const textEl = document.getElementById('popUpText');
@@ -719,6 +573,7 @@ export default class GameOfLife extends Component {
   captureImgs = async (frmaes, interval, delay, backwards) => {
     const el = document.querySelector('#lifeDeathContainer');
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
+    const recordAnimation = document.getElementById('recordAnimation');
     const imgs = [];
     for (let i = 0; i < frmaes + delay; i++) {
       await html2canvas(el).then(canvas => imgs.push(canvas.toDataURL('image/png')));
@@ -739,12 +594,14 @@ export default class GameOfLife extends Component {
       },
       obj => (!obj.error ? saveAs(obj.image, 'Game of life') : console.error(obj.error))
     );
+    recordAnimation.style.display = 'none';
     buttons.forEach(e => (e.disabled = false));
     this.toggleDownloadWindow();
   };
 
   downloadButtonHandle = () => {
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
+    const recordAnimation = document.getElementById('recordAnimation');
     const isPNG = document.getElementById('downloadPNG').checked ? true : false;
     const isBounce = document.getElementById('gifBounce').checked ? true : false;
     const frames = Number(document.getElementById('gifFrames').value);
@@ -754,23 +611,23 @@ export default class GameOfLife extends Component {
       this.downloadImg();
       this.toggleDownloadWindow();
     } else {
+      recordAnimation.style.display = 'block';
       buttons.forEach(e => (e.disabled = true));
       this.captureImgs(frames, inval, delay, isBounce);
     }
   };
 
-  findPanelsPos = () => {
-    const panels = [
-      document.getElementById('controlPanel').getBoundingClientRect(),
-      document.getElementById('gridControlPanel').getBoundingClientRect(),
-      document.getElementById('colorControlPanel').getBoundingClientRect(),
-      document.getElementById('saveControlPanel').getBoundingClientRect(),
-    ];
+  findPanelsPos = id => {
+    const panels = ['controlPanel', 'gridControlPanel', 'colorControlPanel', 'saveControlPanel'];
+    panels.splice(
+      panels.findIndex(e => e === id),
+      1
+    );
     const pos = panels.map(e => [
-      e.left + window.scrollX,
-      e.bottom + window.scrollY,
-      e.right + window.scrollX,
-      e.top + window.scrollY,
+      document.getElementById(e).getBoundingClientRect().left + window.scrollX,
+      document.getElementById(e).getBoundingClientRect().bottom + window.scrollY,
+      document.getElementById(e).getBoundingClientRect().right + window.scrollX,
+      document.getElementById(e).getBoundingClientRect().top + window.scrollY,
     ]);
     panelsPos = pos;
   };
@@ -781,7 +638,6 @@ export default class GameOfLife extends Component {
     const width = this.state.gridWidth;
     const height = this.state.gridHeight;
     const isDead = d => window.getComputedStyle(pixels[d]).backgroundColor === correntColor;
-    // const isDead = d => this.state.eraser ? pixels[d].dataset.live === 'true' : pixels[d].dataset.live !== 'true';
     const firstPixle = f => ~~(f / this.state.gridWidth) * this.state.gridWidth;
     const lastPixle = l => ~~(l / this.state.gridWidth) * this.state.gridWidth + this.state.gridWidth - 1;
     const bottomPixel = b => ~~(b / this.state.gridWidth) !== height;
@@ -822,7 +678,7 @@ export default class GameOfLife extends Component {
             id='grabPad'
             onMouseDown={e => {
               const el = document.getElementById('controlPanel');
-              this.findPanelsPos();
+              this.findPanelsPos('controlPanel');
               windowLeft = el.getBoundingClientRect().left - e.clientX;
               windowTop = el.getBoundingClientRect().top - e.clientY;
               window.addEventListener('mousemove', this.grabPanel);
@@ -1064,7 +920,7 @@ export default class GameOfLife extends Component {
             id='grabPad'
             onMouseDown={e => {
               const el = document.getElementById('gridControlPanel').getBoundingClientRect();
-              this.findPanelsPos();
+              this.findPanelsPos('gridControlPanel');
               windowLeft = el.left - e.clientX;
               windowTop = el.top - e.clientY;
               window.addEventListener('mousemove', this.grabGridPanel);
@@ -1081,6 +937,7 @@ export default class GameOfLife extends Component {
               <path d='M20,9H4v2h16V9z M4,15h16v-2H4V15z' />
             </svg>
           </div>
+          <div className='devider'></div>
           <input
             className='inputNumber'
             type='number'
@@ -1162,7 +1019,7 @@ export default class GameOfLife extends Component {
             id='grabPad'
             onMouseDown={e => {
               const el = document.getElementById('colorControlPanel').getBoundingClientRect();
-              this.findPanelsPos();
+              this.findPanelsPos('colorControlPanel');
               windowLeft = el.left - e.clientX;
               windowTop = el.top - e.clientY;
               window.addEventListener('mousemove', this.grabColorPanel);
@@ -1179,6 +1036,7 @@ export default class GameOfLife extends Component {
               <path d='M20,9H4v2h16V9z M4,15h16v-2H4V15z' />
             </svg>
           </div>
+          <div className='devider'></div>
           <button
             className='buttons'
             style={{
@@ -1248,7 +1106,7 @@ export default class GameOfLife extends Component {
             id='grabPad'
             onMouseDown={e => {
               const el = document.getElementById('saveControlPanel').getBoundingClientRect();
-              this.findPanelsPos();
+              this.findPanelsPos('saveControlPanel');
               windowLeft = el.left - e.clientX;
               windowTop = el.top - e.clientY;
               window.addEventListener('mousemove', this.grabSavePanel);
@@ -1358,6 +1216,7 @@ export default class GameOfLife extends Component {
               </svg>
             </button>
           </div>
+          <div id='recordAnimation'></div>
           <input
             type='radio'
             id='downloadPNG'
@@ -1387,17 +1246,22 @@ export default class GameOfLife extends Component {
           ></input>
           <label htmlFor='downloadGIF'>Download as animated gif file.</label>
           <div id='gifDownlaodSettings'>
-            <label htmlFor='frames'>Frames : </label>
-            <input id='gifFrames' type='number' name='frames' defaultValue='10' disabled></input>
-            <br></br>
-            <label htmlFor='interval'>Interval (ms) : </label>
-            <input id='gifInterval' type='number' name='interval' defaultValue='100' disabled></input>
-            <br></br>
-            <label htmlFor='gifDelay'>Delay (frames) : </label>
-            <input id='gifDelay' type='number' name='gifDelay' defaultValue='4' disabled></input>
-            <br></br>
-            <input id='gifBounce' type='checkbox' name='gifBounce' disabled></input>
-            <label htmlFor='gifBounce'>Bounce Back</label>
+            <div>
+              <label htmlFor='frames'>Frames : </label>
+              <input id='gifFrames' type='number' name='frames' defaultValue='10' disabled></input>
+            </div>
+            <div>
+              <label htmlFor='interval'>Interval (ms) : </label>
+              <input id='gifInterval' type='number' name='interval' defaultValue='100' disabled></input>
+            </div>
+            <div>
+              <label htmlFor='gifDelay'>Delay (frames) : </label>
+              <input id='gifDelay' type='number' name='gifDelay' defaultValue='4' disabled></input>
+            </div>
+            <div>
+              <input id='gifBounce' type='checkbox' name='gifBounce' disabled></input>
+              <label htmlFor='gifBounce'>Forward and Backward</label>
+            </div>
           </div>
           <div id='downloadCancleContainer'>
             <button onClick={this.downloadButtonHandle}>Download</button>

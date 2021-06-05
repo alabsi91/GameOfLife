@@ -146,6 +146,9 @@ p {
   background-color: #454545;
   border: solid 1px #636363;
 }
+#downloadCancleContainer button:disabled {
+  color: #6d6d6d;
+}
 #closeDownloadWindow {
   padding: 0px;
   width: 20px;
@@ -162,12 +165,21 @@ p {
   background-color: #454545;
 }
 #gifDownlaodSettings {
-  text-align: end;
-  height: 90px;
   margin-top: 5px;
-  margin-right: 145px;
 }
-#gifDownlaodSettings input[type=number] {
+#gifDownlaodSettings div {
+  margin: auto;
+  width: 75%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#gifDownlaodSettings div:nth-last-child(1) {
+  margin: auto;
+  width: 75%;
+  display: block;
+}
+#gifDownlaodSettings input[type='number'] {
   width: 40%;
   padding: 4px 0px;
   border: solid 1px #636363;
@@ -176,8 +188,12 @@ p {
   background-color: #454545;
   margin: 10px 0px;
 }
-#gifDownlaodSettings input[type=checkbox] {
+#gifDownlaodSettings input[type='number']:disabled {
+  color: #6d6d6d;
+}
+#gifDownlaodSettings input[type='checkbox'] {
   margin: 10px 10px;
+  margin-left: 0px;
 }
 #downloadWindow > input {
   margin: 15px 15px;
@@ -186,6 +202,30 @@ p {
   font-size: 14px;
   color: #d7d7d7;
   font-family: system-ui;
+}
+#recordAnimation {
+  width: 10px;
+  height: 10px;
+  background-color: red;
+  border-radius: 5px;
+  position: absolute;
+  right: 10px;
+  top: 28px;
+  animation-name: record;
+  animation-duration: 1.5s;
+  animation-iteration-count: infinite;
+  display: none;
+}
+@keyframes record {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 #saveWindow {
   position: absolute;
@@ -473,7 +513,7 @@ p {
   cursor: crosshair;
   z-index: 1;
 }
-.lifeDeathPixels[data-live="false"]:hover {
+.lifeDeathPixels[data-live='false']:hover {
   background-color: rgb(133, 133, 133) !important;
 }
 #horizenLine {
@@ -532,10 +572,11 @@ p {
   width: 50px;
   background-color: #535353;
   box-shadow: 0px 0px 2px 0px rgb(0 0 0 / 75%);
+  box-sizing: border-box;
   z-index: 5;
 }
 #controlPanel {
-  left: 82px;
+  left: 80px;
 }
 #saveControlPanel {
   top: 15px;
@@ -544,7 +585,7 @@ p {
   top: 151px;
 }
 #colorControlPanel {
-  top: 348px;
+  top: 358px;
 }
 .inputNumber {
   cursor: initial;
