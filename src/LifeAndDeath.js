@@ -20,25 +20,31 @@ let undo = [];
 let redo = [];
 
 export default class GameOfLife extends Component {
-  state = {
-    isPlaying: false,
-    isPaused: false,
-    drwaMode: false,
-    isRandomColor: false,
-    symmetricalX: false,
-    symmetricalY: false,
-    eraser: false,
-    paintBuc: false,
-    speed: localStorage.getItem('speed') ? Number(localStorage.getItem('speed')) : 100,
-    pixelSize: localStorage.getItem('pixelSize') ? Number(localStorage.getItem('pixelSize')) : 15,
-    gridWidth: localStorage.getItem('gridWidth') ? Number(localStorage.getItem('gridWidth')) : 90,
-    gridHeight: localStorage.getItem('gridHeight') ? Number(localStorage.getItem('gridHeight')) : 50,
-    pixelSpace: localStorage.getItem('pixelSpace') ? Number(localStorage.getItem('pixelSpace')) : 0.5,
-    pixleColor: localStorage.getItem('pixleColor') ? localStorage.getItem('pixleColor') : '#ffffff',
-    betweenPixleColor: localStorage.getItem('betweenPixleColor') ? localStorage.getItem('betweenPixleColor') : '#282828',
-    SymmetryLinesColor: localStorage.getItem('SymmetryLinesColor') ? localStorage.getItem('SymmetryLinesColor') : '#868686',
-    backgroundPixleColor: localStorage.getItem('backgroundPixleColor') ? localStorage.getItem('backgroundPixleColor') : '#000000',
-  };
+  constructor(props) {
+    super(props);
+    this.state = {
+      isPlaying: false,
+      isPaused: false,
+      drwaMode: false,
+      isRandomColor: false,
+      symmetricalX: false,
+      symmetricalY: false,
+      eraser: false,
+      paintBuc: false,
+      loadCards: this.renderLoadCards(),
+      speed: localStorage.getItem('speed') ? Number(localStorage.getItem('speed')) : 100,
+      pixelSize: localStorage.getItem('pixelSize') ? Number(localStorage.getItem('pixelSize')) : 15,
+      gridWidth: localStorage.getItem('gridWidth') ? Number(localStorage.getItem('gridWidth')) : 90,
+      gridHeight: localStorage.getItem('gridHeight') ? Number(localStorage.getItem('gridHeight')) : 50,
+      pixelSpace: localStorage.getItem('pixelSpace') ? Number(localStorage.getItem('pixelSpace')) : 0.5,
+      pixleColor: localStorage.getItem('pixleColor') ? localStorage.getItem('pixleColor') : '#ffffff',
+      betweenPixleColor: localStorage.getItem('betweenPixleColor') ? localStorage.getItem('betweenPixleColor') : '#282828',
+      SymmetryLinesColor: localStorage.getItem('SymmetryLinesColor') ? localStorage.getItem('SymmetryLinesColor') : '#868686',
+      backgroundPixleColor: localStorage.getItem('backgroundPixleColor')
+        ? localStorage.getItem('backgroundPixleColor')
+        : '#000000',
+    };
+  }
 
   componentDidMount() {
     this.appendDivs(this.state.gridWidth, this.state.gridHeight);
@@ -468,7 +474,11 @@ export default class GameOfLife extends Component {
     }
   };
   toggleSaveWindow = () => this.toggleWindowHandle('saveWindow');
-  toggleLoadWindow = () => this.toggleWindowHandle('loadWindow');
+  toggleLoadWindow = () => {
+    document.querySelectorAll(`.loadCard`).forEach(e => e.removeAttribute('style'));
+    this.setState(() => ({ loadCards: this.renderLoadCards() }));
+    this.toggleWindowHandle('loadWindow');
+  };
   toggleDownloadWindow = () => this.toggleWindowHandle('downloadWindow');
   togglePopUp = () => this.toggleWindowHandle('popUp');
 
@@ -513,9 +523,8 @@ export default class GameOfLife extends Component {
     });
   };
 
-  renderLoadCards = () => {
-    const saved = JSON.parse(localStorage.getItem('saved'));
-    return saved?.map((e, i) => (
+  renderLoadCards = () =>
+    JSON.parse(localStorage.getItem('saved'))?.map((e, i) => (
       <LoadCards
         loadHandle={() => this.loadSaves(i)}
         removeSaveHandle={e => this.removeSave(e, i)}
@@ -527,7 +536,6 @@ export default class GameOfLife extends Component {
         key={i}
       ></LoadCards>
     ));
-  };
 
   loadSaves = i => {
     this.pauseRender();
@@ -567,7 +575,7 @@ export default class GameOfLife extends Component {
     saved.length === 0
       ? (document.getElementById('noLoads').style.display = 'block')
       : (document.getElementById('noLoads').style.display = 'none');
-    document.querySelectorAll(`.loadCard[data-key="${i}"]`)[0].style.display = 'none';
+    this.setState(() => ({ loadCards: this.renderLoadCards() }));
   };
 
   captureImgs = async (frmaes, interval, delay, backwards) => {
@@ -1310,7 +1318,7 @@ export default class GameOfLife extends Component {
             </button>
           </div>
           <div id='loadContents'>
-            {this.renderLoadCards()}
+            {this.state.loadCards}
             <p id='noLoads'>No Saved Drawings found</p>
           </div>
         </div>
