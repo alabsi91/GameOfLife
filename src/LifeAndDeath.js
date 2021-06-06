@@ -2,7 +2,7 @@ import html2canvas from 'html2canvas';
 import React, { Component } from 'react';
 import { pattrens } from './pattrens';
 import { saveAs } from 'file-saver';
-import { requestFrame } from 'selector_dom';
+import { colorToArr, requestFrame } from 'selector_dom';
 import { createGIF } from 'gifshot';
 
 let interval,
@@ -329,8 +329,8 @@ export default class GameOfLife extends Component {
   };
 
   resetRender = () => {
+    if (!this.state.isPlaying) this.readDrawing();
     clearInterval(interval);
-    this.readDrawing();
     const pixels = document.querySelectorAll('.lifeDeathPixels[data-live=true]');
     pixels.forEach(e => this.toDeath(e));
     this.setState({ isPlaying: false, isPaused: false });
@@ -350,8 +350,8 @@ export default class GameOfLife extends Component {
       if (lastPaintGrid[0] > this.state.gridWidth || lastPaintGrid[1] > this.state.gridHeight) {
         this.openPopUp(`Can't retrive last paint, current grid size is smaller than ${lastPaintGrid[0]}x${lastPaintGrid[1]}`);
       } else if (lastPaintGrid[0] !== this.state.gridWidth || lastPaintGrid[1] !== this.state.gridHeight) {
-        this.openPopUp(`This paint was painted orginaly on ${lastPaintGrid[0]}x${lastPaintGrid[1]} grid`);
         this.readDrawing();
+        this.openPopUp(`This paint was painted orginaly on ${lastPaintGrid[0]}x${lastPaintGrid[1]} grid`);
         this.applyPattren(lastPaint, lastPaintColors, lastPaintGrid[0]);
       } else {
         this.readDrawing();
@@ -643,6 +643,8 @@ export default class GameOfLife extends Component {
   paintBuc = i => {
     const pixels = document.querySelectorAll('.lifeDeathPixels');
     const correntColor = window.getComputedStyle(pixels[i]).backgroundColor;
+    const hexToRGB = c => `rgb(${colorToArr(c)[0]}, ${colorToArr(c)[1]}, ${colorToArr(c)[2]})`;
+    const sameColor = correntColor !== hexToRGB(this.state.pixleColor);
     const width = this.state.gridWidth;
     const height = this.state.gridHeight;
     const isEmpty = d => {
@@ -653,7 +655,12 @@ export default class GameOfLife extends Component {
         window.getComputedStyle(pixels[d]).backgroundColor === correntColor
       ) {
         return true;
-      } else if (pixels[d] && !this.state.eraser && window.getComputedStyle(pixels[d]).backgroundColor === correntColor) {
+      } else if (
+        pixels[d] &&
+        !this.state.eraser &&
+        window.getComputedStyle(pixels[d]).backgroundColor === correntColor &&
+        sameColor
+      ) {
         return true;
       } else return false;
     };
@@ -690,9 +697,8 @@ export default class GameOfLife extends Component {
         checkAround(down);
       }
     };
-
+    toDraw(i);
     checkAround(i);
-    // console.log(isEmpty(i))
   };
 
   render() {
