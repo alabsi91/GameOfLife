@@ -670,7 +670,9 @@ export default class GameOfLife extends Component {
         pixels[x].style.backgroundColor = this.state.backgroundPixleColor;
         pixels[x].removeAttribute('data-live');
       } else {
-        pixels[x].style.backgroundColor = this.state.pixleColor;
+        pixels[x].style.backgroundColor = this.state.isRandomColor
+          ? `hsla(${Math.random() * 360}, 100%, 40%, 1)`
+          : this.state.pixleColor;
         pixels[x].dataset.live = 'true';
       }
     };
@@ -974,15 +976,16 @@ export default class GameOfLife extends Component {
             type='number'
             title='How many squares per row'
             min='20'
-            max='150'
+            max='100'
             value={this.state.gridWidth}
             disabled={this.state.isPlaying}
             onChange={e => {
-              this.setState({ gridWidth: Number(e.target.value) });
+              const value = Number(e.target.value) > 100 ? 100 : Number(e.target.value);
+              this.setState({ gridWidth: value });
               const pixels = document.querySelectorAll('.lifeDeathPixels');
               pixels.forEach(el => el.remove());
-              this.appendDivs(Number(e.target.value), this.state.gridHeight);
-              localStorage.setItem('gridWidth', Number(e.target.value));
+              this.appendDivs(value, this.state.gridHeight);
+              localStorage.setItem('gridWidth', value);
               undo = [];
             }}
           ></input>
@@ -992,15 +995,16 @@ export default class GameOfLife extends Component {
             type='number'
             title='How many squares per column'
             min='20'
-            max='150'
+            max='100'
             value={this.state.gridHeight}
             disabled={this.state.isPlaying}
             onChange={e => {
-              this.setState({ gridHeight: Number(e.target.value) });
+              const value = Number(e.target.value) > 100 ? 100 : Number(e.target.value);
+              this.setState({ gridHeight: value });
               const pixels = document.querySelectorAll('.lifeDeathPixels');
               pixels.forEach(el => el.remove());
-              this.appendDivs(this.state.gridWidth, Number(e.target.value));
-              localStorage.setItem('gridHeight', Number(e.target.value));
+              this.appendDivs(this.state.gridWidth, value);
+              localStorage.setItem('gridHeight', value);
               undo = [];
             }}
           ></input>
@@ -1468,8 +1472,11 @@ export default class GameOfLife extends Component {
                 height:
                   this.state.gridHeight % 2 !== 0
                     ? this.state.pixelSpace * 4 + this.state.pixelSize + 'px'
-                    : this.state.pixelSpace * 2,
+                    : this.state.pixelSpace * 2 + 'px',
                 backgroundColor: this.state.SymmetryLinesColor,
+                top: `calc(50%  - ${
+                  this.state.gridHeight % 2 !== 0 ? (this.state.pixelSpace * 4 + this.state.pixelSize) / 2 : this.state.pixelSpace
+                }px)`,
               }}
             ></nav>
             <nav
@@ -1478,8 +1485,11 @@ export default class GameOfLife extends Component {
                 width:
                   this.state.gridWidth % 2 !== 0
                     ? this.state.pixelSpace * 4 + this.state.pixelSize + 'px'
-                    : this.state.pixelSpace * 2,
+                    : this.state.pixelSpace * 2 + 'px',
                 backgroundColor: this.state.SymmetryLinesColor,
+                left: `calc(50%  - ${
+                  this.state.gridWidth % 2 !== 0 ? (this.state.pixelSpace * 4 + this.state.pixelSize) / 2 : this.state.pixelSpace
+                }px)`,
               }}
             ></nav>
             <nav id='MouseHorizenLine'></nav>

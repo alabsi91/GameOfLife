@@ -518,20 +518,14 @@ p {
 }
 #horizenLine {
   width: 100%;
-  transform: translate(0, -50%);
-  height: 19px;
   position: absolute;
-  top: 50%;
   background: #868686;
   z-index: -1;
   pointer-events: none;
 }
 #verticalLine {
-  width: 19px;
   height: 100%;
-  transform: translate(-50%, 0px);
   position: absolute;
-  left: 50%;
   background: #868686;
   z-index: -1;
   pointer-events: none;
@@ -585,12 +579,12 @@ p {
   top: 151px;
 }
 #colorControlPanel {
-  top: 358px;
+  top: 390px;
 }
 .inputNumber {
   cursor: initial;
   width: 85%;
-  padding: 4px 0px;
+  padding: 6px 0px;
   text-align: right;
   border: solid 1px #636363;
   border-radius: 2px;
@@ -705,7 +699,7 @@ input[type='color']::-webkit-color-swatch {
   font-size: 9px;
   color: #d7d7d7;
   margin: 0px;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
   margin-top: 0px;
   font-family: system-ui;
 }
