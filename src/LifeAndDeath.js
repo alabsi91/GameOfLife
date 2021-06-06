@@ -15,7 +15,8 @@ let interval,
   lineLeft,
   forResize,
   isWindowOpened,
-  panelsPos;
+  panelsPos,
+  extractedData;
 let undo = [];
 let redo = [];
 
@@ -70,6 +71,7 @@ export default class GameOfLife extends Component {
       this.grabGridPanel,
       this.grabColorPanel,
       this.grabSavePanel,
+      this.grabConfirm,
     ];
     window.addEventListener('mouseup', () => grabHandles.forEach(e => window.removeEventListener('mousemove', e)));
     this.keyboardShourtcuts();
@@ -418,7 +420,7 @@ export default class GameOfLife extends Component {
   grabLoad = l => this.grabWindowHandel(l, 'loadWindow');
   grabDownload = l => this.grabWindowHandel(l, 'downloadWindow');
   grabPopUp = l => this.grabWindowHandel(l, 'popUp');
-
+  grabConfirm = l => this.grabWindowHandel(l, 'confirmWindow');
   copyToClipBoard = () => {
     this.pauseRender();
     html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 2 }).then(canvas => {
@@ -481,6 +483,7 @@ export default class GameOfLife extends Component {
   };
   toggleDownloadWindow = () => this.toggleWindowHandle('downloadWindow');
   togglePopUp = () => this.toggleWindowHandle('popUp');
+  toggleConfirmWindow = () => this.toggleWindowHandle('confirmWindow');
 
   openPopUp = t => {
     const textEl = document.getElementById('popUpText');
@@ -701,6 +704,30 @@ export default class GameOfLife extends Component {
     };
     toDraw(i);
     checkAround(i);
+  };
+
+  exportData = () => {
+    const myData = localStorage.getItem('saved');
+    const myblob = new Blob([myData], { type: 'application/json' });
+    saveAs(myblob, 'saved-drawings', { type: 'application/json' });
+  };
+
+  confirmAdd = () => {
+    const LocalData = localStorage.getItem('saved');
+    if (LocalData) {
+      const oldData = JSON.parse(LocalData);
+      const imported = JSON.parse(extractedData);
+      oldData.push(...imported);
+      localStorage.setItem('saved', JSON.stringify(oldData));
+      this.toggleLoadWindow();
+    } else this.openPopUp('Old data not found');
+    this.toggleConfirmWindow();
+  };
+
+  confirmReplace = () => {
+    localStorage.setItem('saved', extractedData);
+    this.toggleConfirmWindow();
+    this.toggleLoadWindow();
   };
 
   render() {
@@ -1328,6 +1355,29 @@ export default class GameOfLife extends Component {
           </div>
         </div>
 
+        <div id='confirmWindow'>
+          <div
+            id='confirmWindowHeader'
+            onMouseDown={e => {
+              windowLeft = e.target.getBoundingClientRect().left - e.clientX;
+              windowTop = e.target.getBoundingClientRect().top - e.clientY;
+              window.addEventListener('mousemove', this.grabConfirm);
+            }}
+          >
+            <p>Please Confirm</p>
+            <button id='closeConfirm' onClick={this.toggleConfirmWindow} onMouseDown={e => e.stopPropagation()}>
+              <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
+                <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
+              </svg>
+            </button>
+            <p id='confirmTxt'>Do you want to replace your exciting data or add the new data to your old one</p>
+          </div>
+          <div id='addReplaceContainer'>
+            <button onClick={this.confirmAdd}>Add</button>
+            <button onClick={this.confirmReplace}>Replace</button>
+          </div>
+        </div>
+
         <div id='loadWindow'>
           <div
             id='loadWindowHeader'
@@ -1344,9 +1394,41 @@ export default class GameOfLife extends Component {
               </svg>
             </button>
           </div>
+          <div id='exportImportContainer'>
+            <input
+              id='getData'
+              type='file'
+              name='getData'
+              accept='.json'
+              onChange={() => {
+                const selectedFile = document.getElementById('getData').files[0];
+                if (selectedFile) {
+                  const reader = new FileReader();
+                  reader.onload = e => {
+                    const res = e.target.result;
+                    if (res) {
+                      extractedData = res;
+                      this.toggleLoadWindow();
+                      this.toggleConfirmWindow();
+                    } else console.error('error occurred while loading the file');
+                  };
+                  reader.readAsText(selectedFile);
+                }
+              }}
+            ></input>
+            <label className='buttons' htmlFor='getData' title='Import your saved drawing from JSON file'>
+              Import
+            </label>
+            <button onClick={this.exportData} title='Export your saved drawing to JSON file'>
+              Export
+            </button>
+          </div>
+
           <div id='loadContents'>
             {this.state.loadCards}
-            <p id='noLoads'>No Saved Drawings found</p>
+            <p id='noLoads' style={{ display: this.state.loadCards ? 'none' : 'block' }}>
+              No Saved Drawings found
+            </p>
           </div>
         </div>
 
