@@ -643,7 +643,7 @@ export default class GameOfLife extends Component {
       },
       async obj => {
         if (!obj.error) {
-          isMP4 ? await this.downloadVideo(obj.image) : saveAs(obj.image, 'Game of life');
+          isMP4 ? await this.downloadVideo(obj.image) : saveAs(obj.image, 'Game-of-life');
           buttons.forEach(e => (e.disabled = false));
           downloadAnimation.style.display = 'none';
           this.toggleDownloadWindow();
@@ -656,11 +656,11 @@ export default class GameOfLife extends Component {
     const { createFFmpeg, fetchFile } = FFmpeg;
     const ffmpeg = createFFmpeg();
     await ffmpeg.load();
-    ffmpeg.FS('writeFile', 'video', await fetchFile(gif));
-    await ffmpeg.run('-f', 'gif', '-i', 'video', 'output.mp4');
-    const data = ffmpeg.FS('readFile', 'output.mp4');
+    ffmpeg.FS('writeFile', 'Game-of-life', await fetchFile(gif));
+    await ffmpeg.run('-f', 'gif', '-i', 'Game-of-life', 'Game-of-life.mp4');
+    const data = ffmpeg.FS('readFile', 'Game-of-life.mp4');
     const res = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-    saveAs(res, 'Game of life');
+    saveAs(res, 'Game-of-life');
   };
 
   downloadButtonHandle = () => {
@@ -1332,7 +1332,7 @@ export default class GameOfLife extends Component {
               window.addEventListener('mousemove', this.grabDownload);
             }}
           >
-            <p>Download your drawing as .png/.gif</p>
+            <p>Download your drawing as .png/.gif/.mp4</p>
             <button id='closeDownloadWindow' onClick={this.toggleDownloadWindow} onMouseDown={e => e.stopPropagation()}>
               <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
                 <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
