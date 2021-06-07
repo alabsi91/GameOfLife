@@ -94,7 +94,7 @@ p {
 #downloadWindow {
   position: absolute;
   width: 400px;
-  height: 350px;
+  height: 390px;
   left: 40vw;
   top: 200px;
   background-color: #1a1a1a;
@@ -687,7 +687,7 @@ p {
   cursor: crosshair;
   z-index: 1;
 }
-.lifeDeathPixels[data-live='false']:hover {
+.lifeDeathPixels:hover {
   background-color: rgb(133, 133, 133) !important;
 }
 #horizenLine {

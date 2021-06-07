@@ -4,6 +4,7 @@ import { pattrens } from './pattrens';
 import { saveAs } from 'file-saver';
 import { colorToArr, requestFrame } from 'selector_dom';
 import { createGIF } from 'gifshot';
+import FFmpeg from '@ffmpeg/ffmpeg';
 
 let interval,
   lastPaint,
@@ -136,8 +137,10 @@ export default class GameOfLife extends Component {
     const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
     let reg = [[], []];
     pixels.forEach(e => {
+      e.classList.remove('lifeDeathPixels');
       reg[0].push(Number(e.dataset.pos));
       reg[1].push(window.getComputedStyle(e).backgroundColor);
+      e.classList.add('lifeDeathPixels');
     });
     undo.push(reg);
   };
@@ -591,6 +594,9 @@ export default class GameOfLife extends Component {
           pixels[e].dataset.live = 'true';
         });
         this.toggleLoadWindow();
+        undo = [];
+        redo = [];
+        this.readDrawing();
       }
     );
   };
@@ -611,6 +617,7 @@ export default class GameOfLife extends Component {
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
     const recordAnimation = document.getElementById('recordAnimation');
     const downloadAnimation = document.getElementById('downloadAnimation');
+    const isMP4 = document.getElementById('downloadVideo').checked ? true : false;
     const imgs = [];
     for (let i = 0; i < frmaes; i++) {
       await html2canvas(el).then(canvas => imgs.push(canvas.toDataURL('image/png')));
@@ -634,15 +641,26 @@ export default class GameOfLife extends Component {
         gifHeight: this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize),
         interval: interval / 1000,
       },
-      obj => {
+      async obj => {
         if (!obj.error) {
-          saveAs(obj.image, 'Game of life');
+          isMP4 ? await this.downloadVideo(obj.image) : saveAs(obj.image, 'Game of life');
           buttons.forEach(e => (e.disabled = false));
           downloadAnimation.style.display = 'none';
           this.toggleDownloadWindow();
         } else console.error(obj.error);
       }
     );
+  };
+
+  downloadVideo = async gif => {
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg();
+    await ffmpeg.load();
+    ffmpeg.FS('writeFile', 'video', await fetchFile(gif));
+    await ffmpeg.run('-f', 'gif', '-i', 'video', 'output.mp4');
+    const data = ffmpeg.FS('readFile', 'output.mp4');
+    const res = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+    saveAs(res, 'Game of life');
   };
 
   downloadButtonHandle = () => {
@@ -1355,6 +1373,20 @@ export default class GameOfLife extends Component {
             }}
           ></input>
           <label htmlFor='downloadGIF'>Download as animated gif file.</label>
+          <br></br>
+          <input
+            type='radio'
+            id='downloadVideo'
+            name='download'
+            value='video'
+            onChange={e => {
+              const el = document.querySelectorAll('#gifDownlaodSettings input');
+              e.target.checked
+                ? el.forEach(element => (element.disabled = false))
+                : el.forEach(element => (element.disabled = true));
+            }}
+          ></input>
+          <label htmlFor='downloadGIF'>Download as mp4 video file.</label>
           <div id='gifDownlaodSettings'>
             <div>
               <label htmlFor='frames'>Frames : </label>
