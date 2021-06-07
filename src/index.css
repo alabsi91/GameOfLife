@@ -203,14 +203,31 @@ p {
   color: #d7d7d7;
   font-family: system-ui;
 }
+#downloadAnimation {
+  overflow: hidden;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  position: absolute;
+  right: 10px;
+  top: 28px;
+  display: none;
+}
+#downloadAnimation svg {
+  position: relative;
+  animation-name: download;
+  animation-duration: 1s;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
 #recordAnimation {
   width: 10px;
   height: 10px;
   background-color: red;
   border-radius: 5px;
   position: absolute;
-  right: 10px;
-  top: 28px;
+  right: 17px;
+  top: 34px;
   animation-name: record;
   animation-duration: 1.5s;
   animation-iteration-count: infinite;
@@ -225,6 +242,17 @@ p {
   }
   100% {
     opacity: 0;
+  }
+}
+@keyframes download {
+  0% {
+    top: -21px
+  }
+  90% {
+    top: 22px
+  }
+  100% {
+    top: 22px
   }
 }
 #saveWindow {

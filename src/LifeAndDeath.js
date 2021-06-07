@@ -475,6 +475,31 @@ export default class GameOfLife extends Component {
       isWindowOpened = true;
     }
   };
+  toggleConfirmWindow = () => {
+    const winEl = document.getElementById('confirmWindow');
+    const blured = document.getElementById('blured');
+    const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
+    if (isOpen) {
+      requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
+        winEl.style.transform = `scale(${s})`;
+        blured.style.opacity = s;
+        if (s === 0) {
+          winEl.style.display = 'none';
+          blured.style.display = 'none';
+        }
+      });
+      isWindowOpened = false;
+      document.getElementById('getData').value = '';
+    } else {
+      winEl.style.display = 'initial';
+      blured.style.display = 'block';
+      requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
+        winEl.style.transform = `scale(${s})`;
+        blured.style.opacity = s;
+      });
+      isWindowOpened = true;
+    }
+  };
   toggleSaveWindow = () => this.toggleWindowHandle('saveWindow');
   toggleLoadWindow = () => {
     document.querySelectorAll(`.loadCard`).forEach(e => e.removeAttribute('style'));
@@ -483,7 +508,6 @@ export default class GameOfLife extends Component {
   };
   toggleDownloadWindow = () => this.toggleWindowHandle('downloadWindow');
   togglePopUp = () => this.toggleWindowHandle('popUp');
-  toggleConfirmWindow = () => this.toggleWindowHandle('confirmWindow');
 
   openPopUp = t => {
     const textEl = document.getElementById('popUpText');
@@ -586,16 +610,22 @@ export default class GameOfLife extends Component {
     const el = document.querySelector('#lifeDeathContainer');
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
     const recordAnimation = document.getElementById('recordAnimation');
+    const downloadAnimation = document.getElementById('downloadAnimation');
     const imgs = [];
-    for (let i = 0; i < frmaes + delay; i++) {
+    for (let i = 0; i < frmaes; i++) {
       await html2canvas(el).then(canvas => imgs.push(canvas.toDataURL('image/png')));
-      if (i >= delay) this.renderLifeDeath();
+      this.renderLifeDeath();
     }
+    if (delay) for (let i = 0; i < delay; i++) imgs.unshift(imgs[0]);
+
     if (backwards) {
       const revArray = [];
       for (let i = imgs.length - 1; i >= 0; i--) revArray.push(imgs[i]);
       imgs.push(...revArray);
     }
+
+    recordAnimation.style.display = 'none';
+    downloadAnimation.style.display = 'block';
 
     createGIF(
       {
@@ -604,11 +634,15 @@ export default class GameOfLife extends Component {
         gifHeight: this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize),
         interval: interval / 1000,
       },
-      obj => (!obj.error ? saveAs(obj.image, 'Game of life') : console.error(obj.error))
+      obj => {
+        if (!obj.error) {
+          saveAs(obj.image, 'Game of life');
+          buttons.forEach(e => (e.disabled = false));
+          downloadAnimation.style.display = 'none';
+          this.toggleDownloadWindow();
+        } else console.error(obj.error);
+      }
     );
-    recordAnimation.style.display = 'none';
-    buttons.forEach(e => (e.disabled = false));
-    this.toggleDownloadWindow();
   };
 
   downloadButtonHandle = () => {
@@ -1288,6 +1322,11 @@ export default class GameOfLife extends Component {
             </button>
           </div>
           <div id='recordAnimation'></div>
+          <div id='downloadAnimation'>
+            <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
+              <path d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z' />
+            </svg>
+          </div>
           <input
             type='radio'
             id='downloadPNG'
