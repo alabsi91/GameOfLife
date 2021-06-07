@@ -80,6 +80,11 @@ export default class GameOfLife extends Component {
   }
 
   keyboardShourtcuts = () => {
+    
+    window.addEventListener('keydown', e => {
+      if ((e.ctrlKey && e.key.toLowerCase() === 'z') || (e.ctrlKey && e.key.toLowerCase() === 'y')) e.preventDefault();
+    });
+
     window.addEventListener('keyup', e => {
       if (!isWindowOpened) {
         if (e.ctrlKey && e.key.toLowerCase() === 'z' && undo.length > 0 && !this.state.drwaMode) {
