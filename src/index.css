@@ -687,9 +687,9 @@ p {
   cursor: crosshair;
   z-index: 1;
 }
-.lifeDeathPixels:hover {
+/* .lifeDeathPixels:hover {
   background-color: rgb(133, 133, 133) !important;
-}
+} */
 #horizenLine {
   width: 100%;
   position: absolute;

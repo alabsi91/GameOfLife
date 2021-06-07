@@ -137,10 +137,8 @@ export default class GameOfLife extends Component {
     const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
     let reg = [[], []];
     pixels.forEach(e => {
-      e.classList.remove('lifeDeathPixels');
       reg[0].push(Number(e.dataset.pos));
       reg[1].push(window.getComputedStyle(e).backgroundColor);
-      e.classList.add('lifeDeathPixels');
     });
     undo.push(reg);
   };
