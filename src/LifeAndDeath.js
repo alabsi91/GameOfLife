@@ -636,9 +636,11 @@ export default class GameOfLife extends Component {
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
     const recordAnimation = document.getElementById('recordAnimation');
     const downloadAnimation = document.getElementById('downloadAnimation');
+    const frameCountEl = document.getElementById('frameCount');
     const isMP4 = document.getElementById('downloadVideo').checked ? true : false;
     const imgs = [];
-    for (let i = 0; i < frmaes; i++) {
+    for (let i = 1; i <= frmaes; i++) {
+      frameCountEl.innerHTML = i;
       await html2canvas(el).then(canvas => imgs.push(canvas.toDataURL('image/png')));
       this.renderLifeDeath();
     }
@@ -1398,7 +1400,9 @@ export default class GameOfLife extends Component {
               </svg>
             </button>
           </div>
-          <div id='recordAnimation'></div>
+          <div id='recordAnimation'>
+            <p id='frameCount'>0</p>
+          </div>
           <div id='downloadAnimation'>
             <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
               <path d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z' />
