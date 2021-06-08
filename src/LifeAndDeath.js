@@ -459,7 +459,7 @@ export default class GameOfLife extends Component {
 
   downloadImg = () => {
     this.pauseRender();
-    html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 2 }).then(canvas => {
+    html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 1 }).then(canvas => {
       canvas.toBlob(e => {
         saveAs(e, 'Game of life ' + Date.now());
       }, 'image/png');
