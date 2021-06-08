@@ -20,6 +20,7 @@ let interval,
   extractedData;
 let undo = [];
 let redo = [];
+let xPos, yPos, xDif, yDif, drawDir, dirElem;
 
 export default class GameOfLife extends Component {
   constructor(props) {
@@ -33,6 +34,7 @@ export default class GameOfLife extends Component {
       symmetricalY: false,
       eraser: false,
       paintBuc: false,
+      shiftPressed: false,
       loadCards: this.renderLoadCards(),
       speed: localStorage.getItem('speed') ? Number(localStorage.getItem('speed')) : 100,
       pixelSize: localStorage.getItem('pixelSize') ? Number(localStorage.getItem('pixelSize')) : 15,
@@ -80,9 +82,10 @@ export default class GameOfLife extends Component {
   }
 
   keyboardShourtcuts = () => {
-    
     window.addEventListener('keydown', e => {
-      if ((e.ctrlKey && e.key.toLowerCase() === 'z') || (e.ctrlKey && e.key.toLowerCase() === 'y')) e.preventDefault();
+      if (e.key === 'Shift') this.setState({ shiftPressed: true });
+      if ((e.ctrlKey && e.key.toLowerCase() === 'z') || (e.ctrlKey && e.key.toLowerCase() === 'y') || e.key === 'Shift')
+        e.preventDefault();
     });
 
     window.addEventListener('keyup', e => {
@@ -99,7 +102,7 @@ export default class GameOfLife extends Component {
         } else if (e.key.toLowerCase() === 'b' && !this.state.drwaMode) {
           document.querySelectorAll('input[type="number"').forEach(e => e.blur());
           this.state.paintBuc ? this.setState({ paintBuc: false }) : this.setState({ paintBuc: true });
-        }
+        } else if (e.key === 'Shift') this.setState({ shiftPressed: false });
       }
     });
   };
@@ -167,13 +170,13 @@ export default class GameOfLife extends Component {
     });
   };
 
-  symmetricalX = (i, eraser) => {
+  symmetricalX = i => {
     if (this.state.symmetricalX) {
       const findRow = ~~(i / this.state.gridWidth) * this.state.gridWidth;
       const middleRow = findRow + Math.floor(this.state.gridWidth / 2);
       const findOp = Number.isInteger(this.state.gridWidth / 2) ? middleRow - (i - middleRow + 1) : middleRow - (i - middleRow);
       const pixel = document.querySelectorAll(`.lifeDeathPixels[data-pos="${findOp}"]`)[0];
-      if (eraser) {
+      if (this.state.eraser) {
         this.toDeath(pixel);
       } else {
         this.toLive(pixel);
@@ -181,7 +184,7 @@ export default class GameOfLife extends Component {
     }
   };
 
-  symmetricalY = (i, eraser) => {
+  symmetricalY = i => {
     if (this.state.symmetricalY) {
       const findRow = ~~(i / this.state.gridWidth);
       const findMiddle = Math.floor(this.state.gridHeight / 2);
@@ -190,7 +193,7 @@ export default class GameOfLife extends Component {
         ? i + findDef * this.state.gridWidth * 2 - this.state.gridWidth
         : i + findDef * this.state.gridWidth * 2;
       const pixel = document.querySelectorAll(`.lifeDeathPixels[data-pos="${findOp}"]`)[0];
-      if (eraser) {
+      if (this.state.eraser) {
         this.toDeath(pixel);
       } else {
         this.toLive(pixel);
@@ -210,17 +213,19 @@ export default class GameOfLife extends Component {
       element.style.width = this.state.pixelSize + 'px';
       element.style.height = this.state.pixelSize + 'px';
 
+      // eslint-disable-next-line no-loop-func
       element.addEventListener('mouseenter', e => {
-        if (this.state.drwaMode && !this.state.eraser && !this.state.paintBuc) {
+        if (this.state.drwaMode && !this.state.eraser && !this.state.paintBuc && !this.state.shiftPressed) {
           this.symmetricalX(i);
           this.symmetricalY(i);
-          if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i));
-
+          if (this.state.symmetricalY && this.state.symmetricalX && !this.state.shiftPressed)
+            this.symmetricalX(this.symmetricalY(i));
           this.toLive(e.target);
-        } else if (this.state.drwaMode && this.state.eraser) {
-          this.symmetricalX(i, true);
-          this.symmetricalY(i, true);
-          if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i, true), true);
+        } else if (this.state.drwaMode && this.state.eraser && !this.state.shiftPressed) {
+          this.symmetricalX(i);
+          this.symmetricalY(i);
+          if (this.state.symmetricalY && this.state.symmetricalX && !this.state.shiftPressed)
+            this.symmetricalX(this.symmetricalY(i));
           this.toDeath(e.target);
         }
       });
@@ -228,17 +233,24 @@ export default class GameOfLife extends Component {
       element.addEventListener('mousedown', e => {
         this.setState({ isPaused: false });
         redo = [];
-        if (!this.state.isPlaying && !this.state.eraser && !this.state.paintBuc) {
+        if (!this.state.isPlaying && !this.state.eraser && !this.state.paintBuc && !this.state.shiftPressed) {
           this.symmetricalX(i);
           this.symmetricalY(i);
           if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i));
           this.toLive(e.target);
-        } else if (!this.state.isPlaying && this.state.eraser && !this.state.paintBuc) {
-          this.symmetricalX(i, true);
-          this.symmetricalY(i, true);
-          if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i, true), true);
+        } else if (!this.state.isPlaying && this.state.eraser && !this.state.paintBuc && !this.state.shiftPressed) {
+          this.symmetricalX(i);
+          this.symmetricalY(i);
+          if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i));
           this.toDeath(e.target);
-        } else if (this.state.paintBuc) this.paintBuc(i);
+        } else if (this.state.paintBuc && !this.state.shiftPressed) {
+          this.paintBuc(i);
+        } else if (this.state.shiftPressed) {
+          if (!dirElem) dirElem = i;
+          xPos = e.x;
+          yPos = e.y;
+          window.addEventListener('mousemove', this.shiftDraw);
+        }
       });
       container.appendChild(element);
     }
@@ -280,16 +292,20 @@ export default class GameOfLife extends Component {
   };
 
   toLive = e => {
-    this.state.isRandomColor
-      ? (e.style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 40%, 1)`)
-      : (e.style.backgroundColor = this.state.pixleColor);
-    e.dataset.live = 'true';
+    if (e) {
+      this.state.isRandomColor
+        ? (e.style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 40%, 1)`)
+        : (e.style.backgroundColor = this.state.pixleColor);
+      e.dataset.live = 'true';
+    }
   };
 
   toDeath = e => {
-    if (e.dataset.live === 'true') {
-      e.style.backgroundColor = this.state.backgroundPixleColor;
-      e.removeAttribute('data-live');
+    if (e) {
+      if (e.dataset.live === 'true') {
+        e.style.backgroundColor = this.state.backgroundPixleColor;
+        e.removeAttribute('data-live');
+      }
     }
   };
 
@@ -792,6 +808,46 @@ export default class GameOfLife extends Component {
     localStorage.setItem('saved', extractedData);
     this.toggleConfirmWindow();
     this.toggleLoadWindow();
+  };
+
+  shiftDraw = e => {
+    const pixels = document.querySelectorAll('.lifeDeathPixels');
+    const perSquare = this.state.pixelSize + this.state.pixelSpace * 2;
+    if (e.movementX < 0 && drawDir === 'x' && xDif !== ~~((xPos - e.x) / perSquare)) {
+      this.state.eraser ? this.toDeath(pixels[dirElem]) : this.toLive(pixels[dirElem]);
+      this.symmetricalX(dirElem);
+      this.symmetricalY(dirElem);
+      if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(dirElem));
+      xDif = ~~((xPos - e.x) / perSquare);
+      dirElem = dirElem - 1;
+    } else if (e.movementX > 0 && drawDir === 'x' && xDif !== ~~((e.x - xPos) / perSquare)) {
+      this.state.eraser ? this.toDeath(pixels[dirElem]) : this.toLive(pixels[dirElem]);
+      this.symmetricalX(dirElem);
+      this.symmetricalY(dirElem);
+      if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(dirElem));
+      xDif = ~~((e.x - xPos) / perSquare);
+      dirElem = dirElem + 1;
+    } else if (e.movementY < 0 && drawDir === 'y' && yDif !== ~~((yPos - e.y) / perSquare)) {
+      this.state.eraser ? this.toDeath(pixels[dirElem]) : this.toLive(pixels[dirElem]);
+      this.symmetricalX(dirElem);
+      this.symmetricalY(dirElem);
+      if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(dirElem));
+      yDif = ~~((yPos - e.y) / perSquare);
+      dirElem = dirElem - this.state.gridWidth;
+    } else if (e.movementY > 0 && drawDir === 'y' && yDif !== ~~((e.y - yPos) / perSquare)) {
+      this.state.eraser ? this.toDeath(pixels[dirElem]) : this.toLive(pixels[dirElem]);
+      this.symmetricalX(dirElem);
+      this.symmetricalY(dirElem);
+      if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(dirElem));
+      yDif = ~~((e.y - yPos) / perSquare);
+      dirElem = dirElem + this.state.gridWidth;
+    }
+  };
+
+  getMouseDir = e => {
+    if (!drawDir) {
+      drawDir = e.movementY < 0 || e.movementY > 0 ? 'y' : e.movementX < 0 || e.movementX > 0 ? 'x' : false;
+    }
   };
 
   render() {
@@ -1609,17 +1665,24 @@ export default class GameOfLife extends Component {
             onMouseDown={e => {
               if (!this.state.isPlaying) this.setState({ drwaMode: true });
               document.querySelectorAll('#controlPanel > *').forEach(e => e.blur());
+              window.addEventListener('mousemove', this.getMouseDir);
               e.preventDefault();
             }}
             onMouseUp={() => {
               this.setState({ drwaMode: false });
               this.readDrawing();
+              window.removeEventListener('mousemove', this.getMouseDir);
+              window.removeEventListener('mousemove', this.shiftDraw);
+              [drawDir, dirElem, xDif, yDif] = Array(4).fill(false);
             }}
             onMouseLeave={() => {
               this.setState({ drwaMode: false });
               document.getElementById('MouseHorizenLine').style.display = 'none';
               document.getElementById('MouseVerticalLine').style.display = 'none';
               window.removeEventListener('mousemove', this.trackMouse);
+              window.removeEventListener('mousemove', this.getMouseDir);
+              window.removeEventListener('mousemove', this.shiftDraw);
+              [drawDir, dirElem, xDif, yDif] = Array(4).fill(false);
             }}
             onMouseEnter={e => {
               if (!this.state.isPlaying) {
