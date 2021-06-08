@@ -677,8 +677,22 @@ export default class GameOfLife extends Component {
     const { createFFmpeg, fetchFile } = FFmpeg;
     const ffmpeg = createFFmpeg();
     await ffmpeg.load();
-    ffmpeg.FS('writeFile', 'Game-of-life', await fetchFile(gif));
-    await ffmpeg.run('-f', 'gif', '-i', 'Game-of-life', 'Game-of-life.mp4');
+    ffmpeg.FS('writeFile', 'Game-of-life.gif', await fetchFile(gif));
+    await ffmpeg.run(
+      '-f',
+      'gif',
+      '-i',
+      'Game-of-life.gif',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:v',
+      'libx264',
+      '-movflags',
+      '+faststart',
+      '-filter:v',
+      "crop='floor(in_w/2)*2:floor(in_h/2)*2'",
+      'Game-of-life.mp4'
+    );
     const data = ffmpeg.FS('readFile', 'Game-of-life.mp4');
     const res = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
     saveAs(res, 'Game-of-life');
