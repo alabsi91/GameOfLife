@@ -245,7 +245,7 @@ export default class GameOfLife extends Component {
           this.toDeath(e.target);
         } else if (this.state.paintBuc && !this.state.shiftPressed) {
           this.paintBuc(i);
-        } else if (this.state.shiftPressed) {
+        } else if (this.state.shiftPressed && !this.state.paintBuc) {
           if (!dirElem) dirElem = i;
           xPos = e.x;
           yPos = e.y;
