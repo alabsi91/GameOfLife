@@ -75,6 +75,7 @@ export default class GameOfLife extends Component {
       this.grabColorPanel,
       this.grabSavePanel,
       this.grabConfirm,
+      this.grabMovePanel,
     ];
     window.addEventListener('mouseup', () => grabHandles.forEach(e => window.removeEventListener('mousemove', e)));
     this.keyboardShourtcuts();
@@ -212,6 +213,7 @@ export default class GameOfLife extends Component {
       element.style.backgroundColor = this.state.backgroundPixleColor;
       element.style.width = this.state.pixelSize + 'px';
       element.style.height = this.state.pixelSize + 'px';
+      if (process.env.NODE_ENV === 'development') element.setAttribute('title', i);
 
       // eslint-disable-next-line no-loop-func
       element.addEventListener('mouseenter', e => {
@@ -429,6 +431,7 @@ export default class GameOfLife extends Component {
   grabGridPanel = l => this.stickyGrapHandle(l, 'gridControlPanel');
   grabColorPanel = l => this.stickyGrapHandle(l, 'colorControlPanel');
   grabSavePanel = l => this.stickyGrapHandle(l, 'saveControlPanel');
+  grabMovePanel = l => this.stickyGrapHandle(l, 'moveControlPanel');
 
   grabWindowHandel = (l, el) => {
     l.preventDefault();
@@ -717,7 +720,7 @@ export default class GameOfLife extends Component {
   };
 
   findPanelsPos = id => {
-    const panels = ['controlPanel', 'gridControlPanel', 'colorControlPanel', 'saveControlPanel'];
+    const panels = ['controlPanel', 'gridControlPanel', 'colorControlPanel', 'saveControlPanel', 'moveControlPanel'];
     panels.splice(
       panels.findIndex(e => e === id),
       1
@@ -866,9 +869,57 @@ export default class GameOfLife extends Component {
     }
   };
 
+  moveGrid = dir => {
+    this.readDrawing()
+    const pixels = document.querySelectorAll('.lifeDeathPixels');
+    const width = this.state.gridWidth;
+    const height = this.state.gridHeight;
+    let row = [];
+    let colors = [];
+
+    for (let i = 0; i < width * height; i++) {
+      if (pixels[i].dataset.live === 'true') {
+        row.push(i);
+        colors.push(window.getComputedStyle(pixels[i]).backgroundColor);
+        this.toDeath(pixels[i]);
+      }
+    }
+
+    if (dir === 'up') {
+      row.forEach((e, x) => {
+        if (pixels[e - width]) {
+          pixels[e - width].style.backgroundColor = colors[x];
+          pixels[e - width].dataset.live = 'true';
+        }
+      });
+    } else if (dir === 'down') {
+      row.forEach((e, x) => {
+        if (pixels[e + width]) {
+          pixels[e + width].style.backgroundColor = colors[x];
+          pixels[e + width].dataset.live = 'true';
+        }
+      });
+    } else if (dir === 'left') {
+      row.forEach((e, x) => {
+        if (pixels[e - 1]) {
+          pixels[e - 1].style.backgroundColor = colors[x];
+          pixels[e - 1].dataset.live = 'true';
+        }
+      });
+    } else if (dir === 'right') {
+      row.forEach((e, x) => {
+        if (pixels[e + 1]) {
+          pixels[e + 1].style.backgroundColor = colors[x];
+          pixels[e + 1].dataset.live = 'true';
+        }
+      });
+    }
+  };
+
   render() {
     return (
       <>
+
         <div id='controlPanel' className='controlPanel'>
           <div
             id='grabPad'
@@ -1376,6 +1427,70 @@ export default class GameOfLife extends Component {
               </svg>
             </button>
           </div>
+        </div>
+
+        <div id='moveControlPanel' className='controlPanel'>
+          <div
+            id='grabPad'
+            onMouseDown={e => {
+              const el = document.getElementById('moveControlPanel');
+              this.findPanelsPos('moveControlPanel');
+              windowLeft = el.getBoundingClientRect().left - e.clientX;
+              windowTop = el.getBoundingClientRect().top - e.clientY;
+              window.addEventListener('mousemove', this.grabMovePanel);
+            }}
+          >
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              enableBackground='new 0 0 24 24'
+              height='24px'
+              viewBox='0 0 24 24'
+              width='24px'
+              fill='#D7D7D7'
+            >
+              <path d='M20,9H4v2h16V9z M4,15h16v-2H4V15z' />
+            </svg>
+          </div>
+          <div className='devider'></div>
+
+          <button className='buttons' onClick={() => this.moveGrid('up')} title='Move the drawing up'>
+            <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
+              <path d='M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z' />
+            </svg>
+          </button>
+
+          <div className='twoButtonsContainer'>
+            <button onClick={() => this.moveGrid('left')} title='Move the drawing left'>
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                enableBackground='new 0 0 24 24'
+                height='20px'
+                viewBox='0 0 24 24'
+                width='20px'
+                fill='#D7D7D7'
+              >
+                <path d='M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z' />
+              </svg>
+            </button>
+            <button onClick={() => this.moveGrid('right')} title='Move the drawing right'>
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                enableBackground='new 0 0 24 24'
+                height='20px'
+                viewBox='0 0 24 24'
+                width='20px'
+                fill='#D7D7D7'
+              >
+                <path d='M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z' />
+              </svg>
+            </button>
+          </div>
+
+          <button className='buttons' title='Move the drawing down' onClick={() => this.moveGrid('down')}>
+            <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
+              <path d='M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z' />
+            </svg>
+          </button>
         </div>
 
         <div id='popUp'>

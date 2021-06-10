@@ -749,7 +749,7 @@ p {
   align-items: center;
   width: 50px;
   background-color: #535353;
-  box-shadow: 0px 0px 2px 0px rgb(0 0 0 / 75%);
+  /* box-shadow: 0px 0px 2px 0px rgb(0 0 0 / 75%); */
   box-sizing: border-box;
   z-index: 5;
 }
@@ -764,6 +764,10 @@ p {
 }
 #colorControlPanel {
   top: 390px;
+}
+#moveControlPanel {
+  top: 437px;
+  left: 80px;
 }
 .inputNumber {
   cursor: initial;
@@ -890,14 +894,14 @@ input[type='color']::-webkit-color-swatch {
 .twoButtonsContainer {
   display: flex;
   width: 100%;
-  justify-content: space-around;
+  justify-content: space-between;
 }
 .twoButtonsContainer button {
   padding: 2px;
   margin-bottom: 2px;
   height: 25px;
   border-radius: 2px;
-  border: none;
+  border: solid 1px #00000000 !important;
   font-weight: 200;
   font-size: 14px;
   background-color: initial;
@@ -906,6 +910,7 @@ input[type='color']::-webkit-color-swatch {
 }
 .twoButtonsContainer button:hover {
   background-color: #454545 !important;
+  border: solid 1px #636363 !important;
 }
 .twoButtonsContainer button svg {
   width: 18px;
