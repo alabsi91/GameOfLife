@@ -63,7 +63,9 @@ export default class GameOfLife extends Component {
       } else this.applyPattren(getLastPaint, getLastPaintColros, getLastPaintGrid[0]);
     }
     const grabHandles = [
-      this.imgResize,
+      this.imgResizeCorner,
+      this.imgResizeHeight,
+      this.imgResizeWidth,
       this.grabLayer,
       this.grabGrid,
       this.grabSave,
@@ -447,6 +449,7 @@ export default class GameOfLife extends Component {
   grabDownload = l => this.grabWindowHandel(l, 'downloadWindow');
   grabPopUp = l => this.grabWindowHandel(l, 'popUp');
   grabConfirm = l => this.grabWindowHandel(l, 'confirmWindow');
+
   copyToClipBoard = () => {
     this.pauseRender();
     html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 2 }).then(canvas => {
@@ -470,11 +473,22 @@ export default class GameOfLife extends Component {
     });
   };
 
-  imgResize = e => {
+  imgResizeCorner = e => {
     e.preventDefault();
-    document.getElementById('img').style.width =
-      parseInt(forResize[0], 10) + (e.clientX - forResize[2] + e.clientY - forResize[3]) / 2 + 'px';
-    document.getElementById('img').style.height = 'auto';
+    const aspect = forResize[1] / forResize[0];
+    const width = forResize[0] + (e.clientX - forResize[2] + e.clientY - forResize[3]) / 1.5;
+    document.getElementById('img').style.height = width * aspect + 'px';
+    document.getElementById('img').style.width = width + 'px';
+  };
+
+  imgResizeHeight = e => {
+    e.preventDefault();
+    document.getElementById('img').style.height = forResize[1] + (e.clientY - forResize[3]) + 'px';
+  };
+
+  imgResizeWidth = e => {
+    e.preventDefault();
+    document.getElementById('img').style.width = forResize[0] + (e.clientX - forResize[2]) + 'px';
   };
 
   toggleWindowHandle = el => {
@@ -1767,20 +1781,34 @@ export default class GameOfLife extends Component {
             </button>
           </div>
           <img id='img' alt='imageLayer'></img>
+          <div id='sideImgResize'>
+            <svg
+              id='resizeWidth'
+              title='Resize'
+              onMouseDown={e => {
+                const img = document.getElementById('img');
+                forResize = [img.getBoundingClientRect().width, img.getBoundingClientRect().height, e.clientX, e.clientY];
+                img.style.height = forResize[1] + 'px';
+                window.addEventListener('mousemove', this.imgResizeWidth);
+              }}
+              xmlns='http://www.w3.org/2000/svg'
+              viewBox='0 0 10 40'
+            >
+              <circle cx='5' cy='5' r='5' />
+              <circle cx='5' cy='20' r='5' />
+              <circle cx='5' cy='35' r='5' />
+            </svg>
+          </div>
           <div id='imgResize'>
             <svg
+              id='resizeCorner'
               onMouseDown={e => {
-                forResize = [
-                  document.getElementById('img').getBoundingClientRect().width,
-                  document.getElementById('img').getBoundingClientRect().width,
-                  e.clientX,
-                  e.clientY,
-                ];
-                window.addEventListener('mousemove', this.imgResize);
+                const img = document.getElementById('img');
+                forResize = [img.getBoundingClientRect().width, img.getBoundingClientRect().height, e.clientX, e.clientY];
+                window.addEventListener('mousemove', this.imgResizeCorner);
               }}
               title='Resize'
               version='1.1'
-              id='Capa_1'
               xmlns='http://www.w3.org/2000/svg'
               x='0px'
               y='0px'
@@ -1794,6 +1822,23 @@ export default class GameOfLife extends Component {
               <circle cx='150.802' cy='150.802' r='40.802' />
               <circle cx='260.802' cy='150.802' r='40.802' />
               <circle cx='260.802' cy='260.802' r='40.802' />
+            </svg>
+
+            <svg
+              id='resizeHeight'
+              title='Resize'
+              onMouseDown={e => {
+                const img = document.getElementById('img');
+                forResize = [img.getBoundingClientRect().width, img.getBoundingClientRect().height, e.clientX, e.clientY];
+                img.style.width = img.getBoundingClientRect().width + 'px';
+                window.addEventListener('mousemove', this.imgResizeHeight);
+              }}
+              xmlns='http://www.w3.org/2000/svg'
+              viewBox='0 0 10 40'
+            >
+              <circle cx='5' cy='5' r='5' />
+              <circle cx='5' cy='20' r='5' />
+              <circle cx='5' cy='35' r='5' />
             </svg>
           </div>
         </div>
