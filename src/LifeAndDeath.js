@@ -1189,7 +1189,7 @@ export default class GameOfLife extends Component {
             className='inputNumber'
             type='number'
             title='How many squares per row'
-            min='20'
+            min='5'
             max='100'
             value={this.state.gridWidth}
             disabled={this.state.isPlaying}
@@ -1226,7 +1226,7 @@ export default class GameOfLife extends Component {
             className='inputNumber'
             type='number'
             title='How many squares per column'
-            min='20'
+            min='5'
             max='100'
             value={this.state.gridHeight}
             disabled={this.state.isPlaying}
