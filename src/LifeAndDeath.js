@@ -203,9 +203,10 @@ export default class GameOfLife extends Component {
     }
   };
 
-  appendDivs = (grid, height) => {
+  appendDivs = (grid, height, indx) => {
+    indx = indx || 0;
     const container = document.getElementById('lifeDeathContainer');
-    for (let i = 0; i < grid * height; i++) {
+    for (let i = indx; i < grid * height; i++) {
       const element = document.createElement('div');
       element.className = 'lifeDeathPixels';
       element.dataset.pos = i;
@@ -870,7 +871,7 @@ export default class GameOfLife extends Component {
   };
 
   moveGrid = dir => {
-    this.readDrawing()
+    this.readDrawing();
     const pixels = document.querySelectorAll('.lifeDeathPixels');
     const width = this.state.gridWidth;
     const height = this.state.gridHeight;
@@ -919,7 +920,6 @@ export default class GameOfLife extends Component {
   render() {
     return (
       <>
-
         <div id='controlPanel' className='controlPanel'>
           <div
             id='grabPad'
@@ -1194,13 +1194,31 @@ export default class GameOfLife extends Component {
             value={this.state.gridWidth}
             disabled={this.state.isPlaying}
             onChange={e => {
-              const value = Number(e.target.value) > 100 ? 100 : Number(e.target.value);
-              this.setState({ gridWidth: value });
+              const value = Number(e.target.value) > 100 ? 100 : Number(e.target.value) < 5 ? 5 : Number(e.target.value);
               const pixels = document.querySelectorAll('.lifeDeathPixels');
-              pixels.forEach(el => el.remove());
-              this.appendDivs(value, this.state.gridHeight);
-              localStorage.setItem('gridWidth', value);
-              undo = [];
+              const width = this.state.gridWidth;
+              const height = this.state.gridHeight;
+              const live = [];
+              const colors = [];
+              this.setState({ gridWidth: value }, () => {
+                pixels.forEach((e, i) => {
+                  if (e.dataset.live === 'true') {
+                    live.push(i);
+                    colors.push(window.getComputedStyle(e).backgroundColor);
+                  }
+                });
+                if (value < width) {
+                  for (let i = width * height - 1; i > value * height - 1; i--) {
+                    pixels[i].remove();
+                  }
+                  this.applyPattren(live, colors, width);
+                } else {
+                  this.appendDivs(value, height, width * height);
+                  this.applyPattren(live, colors, width);
+                }
+                localStorage.setItem('gridWidth', value);
+                undo = [];
+              });
             }}
           ></input>
           <p className='controlLabel'>Per Row</p>
@@ -1213,11 +1231,18 @@ export default class GameOfLife extends Component {
             value={this.state.gridHeight}
             disabled={this.state.isPlaying}
             onChange={e => {
-              const value = Number(e.target.value) > 100 ? 100 : Number(e.target.value);
+              const value = Number(e.target.value) > 100 ? 100 : Number(e.target.value) < 5 ? 5 : Number(e.target.value);
               this.setState({ gridHeight: value });
               const pixels = document.querySelectorAll('.lifeDeathPixels');
-              pixels.forEach(el => el.remove());
-              this.appendDivs(this.state.gridWidth, value);
+              const width = this.state.gridWidth;
+              const height = this.state.gridHeight;
+              if (value < height) {
+                for (let i = value * width; i < width * height; i++) {
+                  pixels[i].remove();
+                }
+              } else {
+                this.appendDivs(width, value, width * height);
+              }
               localStorage.setItem('gridHeight', value);
               undo = [];
             }}
