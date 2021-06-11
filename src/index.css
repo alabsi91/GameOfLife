@@ -669,6 +669,21 @@ p {
 #closeImg:hover {
   background-color: #454545;
 }
+#pinImg {
+  padding: 1px;
+  width: 32px;
+  height: 20px;
+  border-radius: 2px;
+  border: none;
+  font-weight: 200;
+  font-size: 14px;
+  background-color: initial;
+  cursor: pointer;
+  float: right;
+}
+#pinImg:hover {
+  background-color: #454545 !important;
+}
 #imgOpacity {
   margin-bottom: 10px;
   -webkit-appearance: none;

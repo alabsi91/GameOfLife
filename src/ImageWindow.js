@@ -3,6 +3,7 @@ import React, { Component } from 'react';
 let windowLeft, windowTop, forResize;
 
 export default class ImageWindow extends Component {
+  state = { isPined: false };
   componentDidMount() {
     window.addEventListener('mouseup', () => {
       window.removeEventListener('mousemove', this.grabLayer);
@@ -13,28 +14,36 @@ export default class ImageWindow extends Component {
   }
 
   grabLayer = l => {
-    l.preventDefault();
-    const grabEl = document.getElementById('imageLayer');
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
-    grabEl.style.left = `${l.pageX + windowLeft}px`;
-    };
-    
+    if (!this.state.isPined) {
+      l.preventDefault();
+      const grabEl = document.getElementById('imageLayer');
+      grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+      grabEl.style.left = `${l.pageX + windowLeft}px`;
+    }
+  };
+
   imgResizeCorner = e => {
-    e.preventDefault();
-    const aspect = forResize[1] / forResize[0];
-    const width = forResize[0] + (e.clientX - forResize[2] + e.clientY - forResize[3]) / 1.5;
-    document.getElementById('img').style.height = width * aspect + 'px';
-    document.getElementById('img').style.width = width + 'px';
+    if (!this.state.isPined) {
+      e.preventDefault();
+      const aspect = forResize[1] / forResize[0];
+      const width = forResize[0] + (e.clientX - forResize[2] + e.clientY - forResize[3]) / 1.5;
+      document.getElementById('img').style.height = width * aspect + 'px';
+      document.getElementById('img').style.width = width + 'px';
+    }
   };
 
   imgResizeHeight = e => {
-    e.preventDefault();
-    document.getElementById('img').style.height = forResize[1] + (e.clientY - forResize[3]) + 'px';
+    if (!this.state.isPined) {
+      e.preventDefault();
+      document.getElementById('img').style.height = forResize[1] + (e.clientY - forResize[3]) + 'px';
+    }
   };
 
   imgResizeWidth = e => {
-    e.preventDefault();
-    document.getElementById('img').style.width = forResize[0] + (e.clientX - forResize[2]) + 'px';
+    if (!this.state.isPined) {
+      e.preventDefault();
+      document.getElementById('img').style.width = forResize[0] + (e.clientX - forResize[2]) + 'px';
+    }
   };
 
   render() {
@@ -73,6 +82,24 @@ export default class ImageWindow extends Component {
           >
             <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
               <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
+            </svg>
+          </button>
+
+          <button
+            id='pinImg'
+            onClick={() => this.setState({ isPined: this.state.isPined ? false : true })}
+            onMouseDown={e => e.stopPropagation()}
+            style={{ backgroundColor: this.state.isPined ? '#383838' : 'initial' }}
+          >
+            <svg xmlns='http://www.w3.org/2000/svg' height='18px' viewBox='0 0 24 24' width='18px' fill='#D7D7D7'>
+              <path
+                style={{ display: this.state.isPined ? 'block' : 'none' }}
+                d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'
+              />
+              <path
+                style={{ display: this.state.isPined ? 'none' : 'block' }}
+                d='M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z'
+              />
             </svg>
           </button>
         </div>
