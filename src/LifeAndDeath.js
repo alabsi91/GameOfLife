@@ -5,6 +5,9 @@ import { saveAs } from 'file-saver';
 import { colorToArr, requestFrame } from 'selector_dom';
 import { createGIF } from 'gifshot';
 import FFmpeg from '@ffmpeg/ffmpeg';
+import ImageWindow from './ImageWindow'
+import LoadCards from './LoadCards';
+import PopUp from './PopUp';
 
 let interval,
   lastPaint,
@@ -14,7 +17,6 @@ let interval,
   windowLeft,
   lineTop,
   lineLeft,
-  forResize,
   isWindowOpened,
   panelsPos,
   extractedData;
@@ -63,10 +65,6 @@ export default class GameOfLife extends Component {
       } else this.applyPattren(getLastPaint, getLastPaintColros, getLastPaintGrid[0]);
     }
     const grabHandles = [
-      this.imgResizeCorner,
-      this.imgResizeHeight,
-      this.imgResizeWidth,
-      this.grabLayer,
       this.grabGrid,
       this.grabSave,
       this.grabLoad,
@@ -445,11 +443,10 @@ export default class GameOfLife extends Component {
     grabEl.style.left = `${l.pageX + windowLeft}px`;
   };
   grabGrid = l => this.grabWindowHandel(l, 'windowContainer');
-  grabLayer = l => this.grabWindowHandel(l, 'imageLayer');
   grabSave = l => this.grabWindowHandel(l, 'saveWindow');
   grabLoad = l => this.grabWindowHandel(l, 'loadWindow');
   grabDownload = l => this.grabWindowHandel(l, 'downloadWindow');
-  grabPopUp = l => this.grabWindowHandel(l, 'popUp');
+
   grabConfirm = l => this.grabWindowHandel(l, 'confirmWindow');
 
   copyToClipBoard = () => {
@@ -473,24 +470,6 @@ export default class GameOfLife extends Component {
         saveAs(e, 'Game of life ' + Date.now());
       }, 'image/png');
     });
-  };
-
-  imgResizeCorner = e => {
-    e.preventDefault();
-    const aspect = forResize[1] / forResize[0];
-    const width = forResize[0] + (e.clientX - forResize[2] + e.clientY - forResize[3]) / 1.5;
-    document.getElementById('img').style.height = width * aspect + 'px';
-    document.getElementById('img').style.width = width + 'px';
-  };
-
-  imgResizeHeight = e => {
-    e.preventDefault();
-    document.getElementById('img').style.height = forResize[1] + (e.clientY - forResize[3]) + 'px';
-  };
-
-  imgResizeWidth = e => {
-    e.preventDefault();
-    document.getElementById('img').style.width = forResize[0] + (e.clientX - forResize[2]) + 'px';
   };
 
   toggleWindowHandle = el => {
@@ -550,7 +529,7 @@ export default class GameOfLife extends Component {
   };
   toggleDownloadWindow = () => this.toggleWindowHandle('downloadWindow');
   togglePopUp = () => this.toggleWindowHandle('popUp');
-
+  
   openPopUp = t => {
     const textEl = document.getElementById('popUpText');
     textEl.innerHTML = t;
@@ -1534,25 +1513,7 @@ export default class GameOfLife extends Component {
           </button>
         </div>
 
-        <div id='popUp'>
-          <div
-            id='popUpHeader'
-            onMouseDown={e => {
-              windowLeft = e.target.getBoundingClientRect().left - e.clientX;
-              windowTop = e.target.getBoundingClientRect().top - e.clientY;
-              window.addEventListener('mousemove', this.grabPopUp);
-            }}
-          >
-            <p>Alert</p>
-            <button id='closePopUp' onClick={this.togglePopUp} onMouseDown={e => e.stopPropagation()}>
-              <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
-                <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
-              </svg>
-            </button>
-          </div>
-          <p id='popUpText'></p>
-          <button onClick={this.togglePopUp}>OK</button>
-        </div>
+        <PopUp></PopUp>
 
         <div id='downloadWindow'>
           <div
@@ -1745,105 +1706,7 @@ export default class GameOfLife extends Component {
           </div>
         </div>
 
-        <div id='imageLayer'>
-          <div
-            id='layerHeader'
-            onMouseDown={e => {
-              windowLeft = e.target.getBoundingClientRect().left - e.clientX;
-              windowTop = e.target.getBoundingClientRect().top - e.clientY;
-              window.addEventListener('mousemove', this.grabLayer);
-            }}
-          >
-            <input
-              type='range'
-              id='imgOpacity'
-              step='0.1'
-              min='0.1'
-              max='1'
-              defaultValue='0.5'
-              onMouseDown={e => {
-                e.stopPropagation();
-                return false;
-              }}
-              onChange={e => {
-                document.querySelectorAll('#imageLayer img')[0].style.opacity = e.target.value;
-              }}
-            ></input>
-            <button
-              id='closeImg'
-              onClick={() => {
-                document.getElementById('imageLayer').style.display = 'none';
-                document.getElementById('getImage').value = '';
-              }}
-              onMouseDown={e => e.stopPropagation()}
-            >
-              <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
-                <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
-              </svg>
-            </button>
-          </div>
-          <img id='img' alt='imageLayer'></img>
-          <div id='sideImgResize'>
-            <svg
-              id='resizeWidth'
-              title='Resize'
-              onMouseDown={e => {
-                const img = document.getElementById('img');
-                forResize = [img.getBoundingClientRect().width, img.getBoundingClientRect().height, e.clientX, e.clientY];
-                img.style.height = forResize[1] + 'px';
-                window.addEventListener('mousemove', this.imgResizeWidth);
-              }}
-              xmlns='http://www.w3.org/2000/svg'
-              viewBox='0 0 10 40'
-            >
-              <circle cx='5' cy='5' r='5' />
-              <circle cx='5' cy='20' r='5' />
-              <circle cx='5' cy='35' r='5' />
-            </svg>
-          </div>
-          <div id='imgResize'>
-            <svg
-              id='resizeCorner'
-              onMouseDown={e => {
-                const img = document.getElementById('img');
-                forResize = [img.getBoundingClientRect().width, img.getBoundingClientRect().height, e.clientX, e.clientY];
-                window.addEventListener('mousemove', this.imgResizeCorner);
-              }}
-              title='Resize'
-              version='1.1'
-              xmlns='http://www.w3.org/2000/svg'
-              x='0px'
-              y='0px'
-              viewBox='0 0 301.604 301.604'
-              style={{ enableBackground: 'new 0 0 301.604 301.604' }}
-              xmlSpace='preserve'
-            >
-              <circle cx='40.802' cy='40.802' r='40.802' />
-              <circle cx='150.802' cy='40.802' r='40.802' />
-              <circle cx='260.802' cy='40.802' r='40.802' />
-              <circle cx='150.802' cy='150.802' r='40.802' />
-              <circle cx='260.802' cy='150.802' r='40.802' />
-              <circle cx='260.802' cy='260.802' r='40.802' />
-            </svg>
-
-            <svg
-              id='resizeHeight'
-              title='Resize'
-              onMouseDown={e => {
-                const img = document.getElementById('img');
-                forResize = [img.getBoundingClientRect().width, img.getBoundingClientRect().height, e.clientX, e.clientY];
-                img.style.width = img.getBoundingClientRect().width + 'px';
-                window.addEventListener('mousemove', this.imgResizeHeight);
-              }}
-              xmlns='http://www.w3.org/2000/svg'
-              viewBox='0 0 10 40'
-            >
-              <circle cx='5' cy='5' r='5' />
-              <circle cx='5' cy='20' r='5' />
-              <circle cx='5' cy='35' r='5' />
-            </svg>
-          </div>
-        </div>
+        <ImageWindow></ImageWindow>
 
         <div id='windowContainer'>
           <div
@@ -1934,28 +1797,4 @@ export default class GameOfLife extends Component {
       </>
     );
   }
-}
-
-function LoadCards(p) {
-  return (
-    <div className='loadCard' data-key={p.loadsKeys} onClick={p.loadHandle}>
-      <img src={p.img} alt='loadimg'></img>
-      <div className='loadInfos'>
-        <p>Name : {p.name}</p>
-        <p>
-          Size : {p.width} x {p.height} Grid
-        </p>
-      </div>
-      <button className='deleteSave' onClick={p.removeSaveHandle} title='Delete this from saved drawings'>
-        <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
-          <path d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z' />
-        </svg>
-      </button>
-      <button className='exportSave' onClick={p.exportSaveHandle} title='Export this to JSON file'>
-        <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
-          <path d='M23 0v20h-8v-2h6v-16h-18v16h6v2h-8v-20h22zm-12 13h-4l5-6 5 6h-4v11h-2v-11z' />{' '}
-        </svg>
-      </button>
-    </div>
-  );
 }
