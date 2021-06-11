@@ -166,10 +166,12 @@ export default class GameOfLife extends Component {
     const centre = moveX + moveY;
     patren.forEach((e, i) => {
       let div = Math.floor(e / pWidth) * dif;
-      this.state.isRandomColor
-        ? (pixels[e + div + centre].style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 40%, 1)`)
-        : (pixels[e + div + centre].style.backgroundColor = colors ? colors[i] : this.state.pixleColor);
-      pixels[e + div + centre].dataset.live = 'true';
+      if (pixels[e + div + centre]) {
+        this.state.isRandomColor
+          ? (pixels[e + div + centre].style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 40%, 1)`)
+          : (pixels[e + div + centre].style.backgroundColor = colors ? colors[i] : this.state.pixleColor);
+        pixels[e + div + centre].dataset.live = 'true';
+      }
     });
   };
 
