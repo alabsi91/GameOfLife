@@ -3,11 +3,10 @@ import React, { Component } from 'react';
 import { pattrens } from './pattrens';
 import { saveAs } from 'file-saver';
 import { colorToArr, requestFrame } from 'selector_dom';
-import { createGIF } from 'gifshot';
-import FFmpeg from '@ffmpeg/ffmpeg';
-import ImageWindow from './ImageWindow'
+import ImageWindow from './ImageWindow';
 import LoadCards from './LoadCards';
 import PopUp from './PopUp';
+import DownloadWindow from './DownloadWindow';
 
 let interval,
   lastPaint,
@@ -430,6 +429,7 @@ export default class GameOfLife extends Component {
       }
     });
   };
+  
   grabPanel = l => this.stickyGrapHandle(l, 'controlPanel');
   grabGridPanel = l => this.stickyGrapHandle(l, 'gridControlPanel');
   grabColorPanel = l => this.stickyGrapHandle(l, 'colorControlPanel');
@@ -445,8 +445,6 @@ export default class GameOfLife extends Component {
   grabGrid = l => this.grabWindowHandel(l, 'windowContainer');
   grabSave = l => this.grabWindowHandel(l, 'saveWindow');
   grabLoad = l => this.grabWindowHandel(l, 'loadWindow');
-  grabDownload = l => this.grabWindowHandel(l, 'downloadWindow');
-
   grabConfirm = l => this.grabWindowHandel(l, 'confirmWindow');
 
   copyToClipBoard = () => {
@@ -459,15 +457,6 @@ export default class GameOfLife extends Component {
             navigator.clipboard.write([new ClipboardItem({ 'image/png': e })]);
           }
         });
-      }, 'image/png');
-    });
-  };
-
-  downloadImg = () => {
-    this.pauseRender();
-    html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 1 }).then(canvas => {
-      canvas.toBlob(e => {
-        saveAs(e, 'Game of life ' + Date.now());
       }, 'image/png');
     });
   };
@@ -529,7 +518,7 @@ export default class GameOfLife extends Component {
   };
   toggleDownloadWindow = () => this.toggleWindowHandle('downloadWindow');
   togglePopUp = () => this.toggleWindowHandle('popUp');
-  
+
   openPopUp = t => {
     const textEl = document.getElementById('popUpText');
     textEl.innerHTML = t;
@@ -628,91 +617,6 @@ export default class GameOfLife extends Component {
       ? (document.getElementById('noLoads').style.display = 'block')
       : (document.getElementById('noLoads').style.display = 'none');
     this.setState(() => ({ loadCards: this.renderLoadCards() }));
-  };
-
-  captureImgs = async (frmaes, interval, delay, backwards) => {
-    const el = document.querySelector('#lifeDeathContainer');
-    const buttons = document.querySelectorAll('#downloadCancleContainer button');
-    const recordAnimation = document.getElementById('recordAnimation');
-    const downloadAnimation = document.getElementById('downloadAnimation');
-    const frameCountEl = document.getElementById('frameCount');
-    const isMP4 = document.getElementById('downloadVideo').checked ? true : false;
-    const imgs = [];
-    for (let i = 1; i <= frmaes; i++) {
-      frameCountEl.innerHTML = i;
-      await html2canvas(el).then(canvas => imgs.push(canvas.toDataURL('image/png')));
-      this.renderLifeDeath();
-    }
-    if (delay) for (let i = 0; i < delay; i++) imgs.unshift(imgs[0]);
-
-    if (backwards) {
-      const revArray = [];
-      for (let i = imgs.length - 1; i >= 0; i--) revArray.push(imgs[i]);
-      imgs.push(...revArray);
-    }
-
-    recordAnimation.style.display = 'none';
-    downloadAnimation.style.display = 'block';
-
-    createGIF(
-      {
-        images: imgs,
-        gifWidth: this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize),
-        gifHeight: this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize),
-        interval: interval / 1000,
-      },
-      async obj => {
-        if (!obj.error) {
-          isMP4 ? await this.downloadVideo(obj.image) : saveAs(obj.image, 'Game-of-life');
-          buttons.forEach(e => (e.disabled = false));
-          downloadAnimation.style.display = 'none';
-          this.toggleDownloadWindow();
-        } else console.error(obj.error);
-      }
-    );
-  };
-
-  downloadVideo = async gif => {
-    const { createFFmpeg, fetchFile } = FFmpeg;
-    const ffmpeg = createFFmpeg();
-    await ffmpeg.load();
-    ffmpeg.FS('writeFile', 'Game-of-life.gif', await fetchFile(gif));
-    await ffmpeg.run(
-      '-f',
-      'gif',
-      '-i',
-      'Game-of-life.gif',
-      '-pix_fmt',
-      'yuv420p',
-      '-c:v',
-      'libx264',
-      '-movflags',
-      '+faststart',
-      '-filter:v',
-      "crop='floor(in_w/2)*2:floor(in_h/2)*2'",
-      'Game-of-life.mp4'
-    );
-    const data = ffmpeg.FS('readFile', 'Game-of-life.mp4');
-    const res = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-    saveAs(res, 'Game-of-life');
-  };
-
-  downloadButtonHandle = () => {
-    const buttons = document.querySelectorAll('#downloadCancleContainer button');
-    const recordAnimation = document.getElementById('recordAnimation');
-    const isPNG = document.getElementById('downloadPNG').checked ? true : false;
-    const isBounce = document.getElementById('gifBounce').checked ? true : false;
-    const frames = Number(document.getElementById('gifFrames').value);
-    const inval = Number(document.getElementById('gifInterval').value);
-    const delay = Number(document.getElementById('gifDelay').value);
-    if (isPNG) {
-      this.downloadImg();
-      this.toggleDownloadWindow();
-    } else {
-      recordAnimation.style.display = 'block';
-      buttons.forEach(e => (e.disabled = true));
-      this.captureImgs(frames, inval, delay, isBounce);
-    }
   };
 
   findPanelsPos = id => {
@@ -1515,95 +1419,14 @@ export default class GameOfLife extends Component {
 
         <PopUp></PopUp>
 
-        <div id='downloadWindow'>
-          <div
-            id='downloadWindowHeader'
-            onMouseDown={e => {
-              windowLeft = e.target.getBoundingClientRect().left - e.clientX;
-              windowTop = e.target.getBoundingClientRect().top - e.clientY;
-              window.addEventListener('mousemove', this.grabDownload);
-            }}
-          >
-            <p>Download your drawing as .png/.gif/.mp4</p>
-            <button id='closeDownloadWindow' onClick={this.toggleDownloadWindow} onMouseDown={e => e.stopPropagation()}>
-              <svg xmlns='http://www.w3.org/2000/svg' height='20px' viewBox='0 0 24 24' width='20px' fill='#D7D7D7'>
-                <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
-              </svg>
-            </button>
-          </div>
-          <div id='recordAnimation'>
-            <p id='frameCount'>0</p>
-          </div>
-          <div id='downloadAnimation'>
-            <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
-              <path d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z' />
-            </svg>
-          </div>
-          <input
-            type='radio'
-            id='downloadPNG'
-            name='download'
-            value='png'
-            defaultChecked
-            onChange={e => {
-              const el = document.querySelectorAll('#gifDownlaodSettings input');
-              e.target.checked
-                ? el.forEach(element => (element.disabled = true))
-                : el.forEach(element => (element.disabled = false));
-            }}
-          ></input>
-          <label htmlFor='downloadPNG'>Download as png file.</label>
-          <br></br>
-          <input
-            type='radio'
-            id='downloadGIF'
-            name='download'
-            value='gif'
-            onChange={e => {
-              const el = document.querySelectorAll('#gifDownlaodSettings input');
-              e.target.checked
-                ? el.forEach(element => (element.disabled = false))
-                : el.forEach(element => (element.disabled = true));
-            }}
-          ></input>
-          <label htmlFor='downloadGIF'>Download as animated gif file.</label>
-          <br></br>
-          <input
-            type='radio'
-            id='downloadVideo'
-            name='download'
-            value='video'
-            onChange={e => {
-              const el = document.querySelectorAll('#gifDownlaodSettings input');
-              e.target.checked
-                ? el.forEach(element => (element.disabled = false))
-                : el.forEach(element => (element.disabled = true));
-            }}
-          ></input>
-          <label htmlFor='downloadGIF'>Download as mp4 video file.</label>
-          <div id='gifDownlaodSettings'>
-            <div>
-              <label htmlFor='frames'>Frames : </label>
-              <input id='gifFrames' type='number' name='frames' defaultValue='10' disabled></input>
-            </div>
-            <div>
-              <label htmlFor='interval'>Interval (ms) : </label>
-              <input id='gifInterval' type='number' name='interval' defaultValue='100' disabled></input>
-            </div>
-            <div>
-              <label htmlFor='gifDelay'>Delay (frames) : </label>
-              <input id='gifDelay' type='number' name='gifDelay' defaultValue='4' disabled></input>
-            </div>
-            <div>
-              <input id='gifBounce' type='checkbox' name='gifBounce' disabled></input>
-              <label htmlFor='gifBounce'>Forward and Backward</label>
-            </div>
-          </div>
-          <div id='downloadCancleContainer'>
-            <button onClick={this.downloadButtonHandle}>Download</button>
-            <button onClick={this.toggleDownloadWindow}>Cancle</button>
-          </div>
-        </div>
+        <DownloadWindow
+          pauseRender={this.pauseRender}
+          renderLifeDeath={this.renderLifeDeath}
+          gridWidth={this.state.gridWidth}
+          gridHeight={this.state.gridHeight}
+          pixelSize={this.state.pixelSize}
+          pixelSpace={this.state.pixelSpace}
+        ></DownloadWindow>
 
         <div id='saveWindow'>
           <div
