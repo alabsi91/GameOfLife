@@ -264,7 +264,7 @@ export default class GameOfLife extends Component {
           this.symmetricalY(i);
           if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i));
           this.toDeath(e.target);
-        } else if (this.state.paintBuc && !this.state.shiftPressed) {
+        } else if (!this.state.isPlaying && this.state.paintBuc && !this.state.shiftPressed) {
           this.paintBuc(i);
         } else if (this.state.shiftPressed && !this.state.paintBuc) {
           if (!dirElem) dirElem = i;
@@ -833,11 +833,7 @@ export default class GameOfLife extends Component {
     }
   };
 
-  setStateAsync(state) {
-    return new Promise(resolve => {
-      this.setState(state, resolve);
-    });
-  }
+  setStateAsync = state => new Promise(resolve => this.setState(state, resolve));
 
   changeGridWidth = async (newWidth, dontApplay) => {
     const pixels = document.querySelectorAll('.lifeDeathPixels');
