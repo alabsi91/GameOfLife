@@ -1041,14 +1041,6 @@ export default class GameOfLife extends Component {
                 imgTag.removeAttribute('style');
                 reader.onload = e => {
                   imgTag.src = e.target.result;
-                  setTimeout(() => {
-                    if (imgTag.getBoundingClientRect().width + 100 >= window.innerWidth) {
-                      imgTag.style.width = window.innerWidth - 100 + 'px';
-                    } else if (imgTag.getBoundingClientRect().height + 100 >= window.innerHeight) {
-                      imgTag.style.height = window.innerHeight - 100 + 'px';
-                    }
-                  }, 100);
-
                   document.getElementById('imageLayer').style.display = 'block';
                 };
                 reader.readAsDataURL(selectedFile);
@@ -1148,11 +1140,11 @@ export default class GameOfLife extends Component {
             type='number'
             title='How many squares per row'
             min='5'
-            max='100'
+            max='120'
             value={this.state.gridWidth}
             disabled={this.state.isPlaying}
             onChange={async e => {
-              const value = Number(e.target.value) > 100 ? 100 : Number(e.target.value) < 5 ? 5 : Number(e.target.value);
+              const value = Number(e.target.value) > 120 ? 120 : Number(e.target.value) < 5 ? 5 : Number(e.target.value);
               await this.changeGridWidth(value);
               this.readDrawing();
             }}
@@ -1163,11 +1155,11 @@ export default class GameOfLife extends Component {
             type='number'
             title='How many squares per column'
             min='5'
-            max='100'
+            max='120'
             value={this.state.gridHeight}
             disabled={this.state.isPlaying}
             onChange={async e => {
-              const value = Number(e.target.value) > 100 ? 100 : Number(e.target.value) < 5 ? 5 : Number(e.target.value);
+              const value = Number(e.target.value) > 120 ? 120 : Number(e.target.value) < 5 ? 5 : Number(e.target.value);
               await this.changeGridHeight(value);
               this.readDrawing();
             }}
