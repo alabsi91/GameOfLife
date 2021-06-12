@@ -107,9 +107,15 @@ export default class GameOfLife extends Component {
     });
   };
 
-  undo = () => {
+  undo = async () => {
     if (undo.length > 0) {
       const last = undo.length - 1;
+      const width = this.state.gridWidth;
+      const height = this.state.gridHeight;
+      if (undo[last - 1]?.[2]) {
+        if (width !== undo[last - 1][2][0]) await this.changeGridWidth(undo[last - 1][2][0], true);
+        if (height !== undo[last - 1][2][1]) await this.changeGridHeight(undo[last - 1][2][1]);
+      }
       const pixels = document.querySelectorAll('.lifeDeathPixels');
       pixels.forEach(e => {
         e.style.backgroundColor = this.state.backgroundPixleColor;
@@ -119,14 +125,22 @@ export default class GameOfLife extends Component {
         pixels[e].style.backgroundColor = undo[last - 1]?.[1][i];
         pixels[e].dataset.live = 'true';
       });
+
       redo.push(undo[last]);
       undo.splice(last, 1);
     }
   };
 
-  redo = () => {
+  redo = async () => {
     if (redo.length > 0) {
       const last = redo.length - 1;
+      const width = this.state.gridWidth;
+      const height = this.state.gridHeight;
+      if (redo[last]?.[2]) {
+        if (width !== redo[last][2][0]) await this.changeGridWidth(redo[last][2][0], true);
+        if (height !== redo[last][2][1]) await this.changeGridHeight(redo[last][2][1]);
+      }
+
       const pixels = document.querySelectorAll('.lifeDeathPixels');
       pixels.forEach(e => {
         e.style.backgroundColor = this.state.backgroundPixleColor;
@@ -143,11 +157,14 @@ export default class GameOfLife extends Component {
 
   readDrawing = () => {
     const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
+    const width = this.state.gridWidth;
+    const height = this.state.gridHeight;
     let reg = [[], []];
     pixels.forEach(e => {
       reg[0].push(Number(e.dataset.pos));
       reg[1].push(window.getComputedStyle(e).backgroundColor);
     });
+    reg.push([width, height]);
     undo.push(reg);
   };
 
@@ -429,7 +446,7 @@ export default class GameOfLife extends Component {
       }
     });
   };
-  
+
   grabPanel = l => this.stickyGrapHandle(l, 'controlPanel');
   grabGridPanel = l => this.stickyGrapHandle(l, 'gridControlPanel');
   grabColorPanel = l => this.stickyGrapHandle(l, 'colorControlPanel');
@@ -816,6 +833,52 @@ export default class GameOfLife extends Component {
     }
   };
 
+  setStateAsync(state) {
+    return new Promise(resolve => {
+      this.setState(state, resolve);
+    });
+  }
+
+  changeGridWidth = async (newWidth, dontApplay) => {
+    const pixels = document.querySelectorAll('.lifeDeathPixels');
+    const width = this.state.gridWidth;
+    const height = this.state.gridHeight;
+    const live = [];
+    const colors = [];
+    await this.setStateAsync({ gridWidth: newWidth });
+    pixels.forEach((e, i) => {
+      if (e.dataset.live === 'true') {
+        live.push(i);
+        colors.push(window.getComputedStyle(e).backgroundColor);
+      }
+    });
+    if (newWidth < width) {
+      for (let i = width * height - 1; i > newWidth * height - 1; i--) {
+        pixels[i].remove();
+      }
+      if (!dontApplay) this.applyPattren(live, colors, width);
+    } else {
+      this.appendDivs(newWidth, height, width * height);
+      if (!dontApplay) this.applyPattren(live, colors, width);
+    }
+    localStorage.setItem('gridWidth', newWidth);
+  };
+
+  changeGridHeight = async newHeight => {
+    const pixels = document.querySelectorAll('.lifeDeathPixels');
+    const width = this.state.gridWidth;
+    const height = this.state.gridHeight;
+    await this.setStateAsync({ gridHeight: newHeight });
+    if (newHeight < height) {
+      for (let i = newHeight * width; i < width * height; i++) {
+        pixels[i].remove();
+      }
+    } else {
+      this.appendDivs(width, newHeight, width * height);
+    }
+    localStorage.setItem('gridHeight', newHeight);
+  };
+
   render() {
     return (
       <>
@@ -1092,32 +1155,10 @@ export default class GameOfLife extends Component {
             max='100'
             value={this.state.gridWidth}
             disabled={this.state.isPlaying}
-            onChange={e => {
+            onChange={async e => {
               const value = Number(e.target.value) > 100 ? 100 : Number(e.target.value) < 5 ? 5 : Number(e.target.value);
-              const pixels = document.querySelectorAll('.lifeDeathPixels');
-              const width = this.state.gridWidth;
-              const height = this.state.gridHeight;
-              const live = [];
-              const colors = [];
-              this.setState({ gridWidth: value }, () => {
-                pixels.forEach((e, i) => {
-                  if (e.dataset.live === 'true') {
-                    live.push(i);
-                    colors.push(window.getComputedStyle(e).backgroundColor);
-                  }
-                });
-                if (value < width) {
-                  for (let i = width * height - 1; i > value * height - 1; i--) {
-                    pixels[i].remove();
-                  }
-                  this.applyPattren(live, colors, width);
-                } else {
-                  this.appendDivs(value, height, width * height);
-                  this.applyPattren(live, colors, width);
-                }
-                localStorage.setItem('gridWidth', value);
-                undo = [];
-              });
+              await this.changeGridWidth(value);
+              this.readDrawing();
             }}
           ></input>
           <p className='controlLabel'>Per Row</p>
@@ -1129,21 +1170,10 @@ export default class GameOfLife extends Component {
             max='100'
             value={this.state.gridHeight}
             disabled={this.state.isPlaying}
-            onChange={e => {
+            onChange={async e => {
               const value = Number(e.target.value) > 100 ? 100 : Number(e.target.value) < 5 ? 5 : Number(e.target.value);
-              this.setState({ gridHeight: value });
-              const pixels = document.querySelectorAll('.lifeDeathPixels');
-              const width = this.state.gridWidth;
-              const height = this.state.gridHeight;
-              if (value < height) {
-                for (let i = value * width; i < width * height; i++) {
-                  pixels[i].remove();
-                }
-              } else {
-                this.appendDivs(width, value, width * height);
-              }
-              localStorage.setItem('gridHeight', value);
-              undo = [];
+              await this.changeGridHeight(value);
+              this.readDrawing();
             }}
           ></input>
           <p className='controlLabel'>Per Column</p>
