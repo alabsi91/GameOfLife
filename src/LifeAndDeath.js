@@ -2,11 +2,11 @@ import html2canvas from 'html2canvas';
 import React, { Component } from 'react';
 import { pattrens } from './pattrens';
 import { saveAs } from 'file-saver';
-import { colorToArr, requestFrame } from 'selector_dom';
 import ImageWindow from './ImageWindow';
 import LoadCards from './LoadCards';
 import PopUp from './PopUp';
 import DownloadWindow from './DownloadWindow';
+import { colorToArr, requestNum } from 'request-animation-number';
 
 let interval,
   lastPaint,
@@ -483,7 +483,7 @@ export default class GameOfLife extends Component {
     const blured = document.getElementById('blured');
     const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
     if (isOpen) {
-      requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
+      requestNum({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
         winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
         if (s === 0) {
@@ -495,7 +495,7 @@ export default class GameOfLife extends Component {
     } else {
       winEl.style.display = 'initial';
       blured.style.display = 'block';
-      requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
+      requestNum({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
         winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
       });
@@ -507,7 +507,7 @@ export default class GameOfLife extends Component {
     const blured = document.getElementById('blured');
     const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
     if (isOpen) {
-      requestFrame({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
+      requestNum({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
         winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
         if (s === 0) {
@@ -520,7 +520,7 @@ export default class GameOfLife extends Component {
     } else {
       winEl.style.display = 'initial';
       blured.style.display = 'block';
-      requestFrame({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
+      requestNum({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
         winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
       });
