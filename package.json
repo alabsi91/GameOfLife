@@ -8,6 +8,7 @@
     "@testing-library/jest-dom": "^5.12.0",
     "@testing-library/react": "^11.2.7",
     "@testing-library/user-event": "^12.8.3",
+    "extract-colors": "^1.1.18",
     "file-saver": "^2.0.5",
     "gifshot": "^0.4.5",
     "html2canvas": "^1.0.0-rc.7",

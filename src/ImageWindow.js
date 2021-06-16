@@ -76,6 +76,7 @@ export default class ImageWindow extends Component {
             id='closeImg'
             onClick={() => {
               document.getElementById('imageLayer').style.display = 'none';
+              document.getElementById('colorPlateControlPanel').style.display = 'none';
               document.getElementById('getImage').value = '';
             }}
             onMouseDown={e => e.stopPropagation()}

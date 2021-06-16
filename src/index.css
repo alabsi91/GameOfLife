@@ -793,7 +793,6 @@ p {
   align-items: center;
   width: 50px;
   background-color: #535353;
-  /* box-shadow: 0px 0px 2px 0px rgb(0 0 0 / 75%); */
   box-sizing: border-box;
   z-index: 5;
 }
@@ -812,6 +811,19 @@ p {
 #moveControlPanel {
   top: 437px;
   left: 80px;
+}
+#colorPlateControlPanel {
+  display: none;
+  left: 130px;
+  padding-bottom: 5px;
+}
+.colorPlateButtons {
+  height: 35px;
+  width: 35px;
+  margin: 5px 0px;
+  cursor: pointer;
+  border-radius: 20px;
+  border: solid 1px #d7d7d7;
 }
 .inputNumber {
   cursor: initial;

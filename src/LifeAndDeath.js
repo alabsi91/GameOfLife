@@ -6,6 +6,7 @@ import ImageWindow from './ImageWindow';
 import LoadCards from './LoadCards';
 import PopUp from './PopUp';
 import DownloadWindow from './DownloadWindow';
+import extractColors from 'extract-colors';
 import { colorToArr, requestNum } from 'request-animation-number';
 
 let interval,
@@ -27,6 +28,7 @@ export default class GameOfLife extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      colorPlate: '',
       isPlaying: false,
       isPaused: false,
       drwaMode: false,
@@ -75,6 +77,7 @@ export default class GameOfLife extends Component {
       this.grabSavePanel,
       this.grabConfirm,
       this.grabMovePanel,
+      this.grabColorPlate,
     ];
     window.addEventListener('mouseup', () => grabHandles.forEach(e => window.removeEventListener('mousemove', e)));
     this.keyboardShourtcuts();
@@ -452,6 +455,7 @@ export default class GameOfLife extends Component {
   grabColorPanel = l => this.stickyGrapHandle(l, 'colorControlPanel');
   grabSavePanel = l => this.stickyGrapHandle(l, 'saveControlPanel');
   grabMovePanel = l => this.stickyGrapHandle(l, 'moveControlPanel');
+  grabColorPlate = l => this.stickyGrapHandle(l, 'colorPlateControlPanel');
 
   grabWindowHandel = (l, el) => {
     l.preventDefault();
@@ -637,7 +641,14 @@ export default class GameOfLife extends Component {
   };
 
   findPanelsPos = id => {
-    const panels = ['controlPanel', 'gridControlPanel', 'colorControlPanel', 'saveControlPanel', 'moveControlPanel'];
+    const panels = [
+      'controlPanel',
+      'gridControlPanel',
+      'colorControlPanel',
+      'saveControlPanel',
+      'moveControlPanel',
+      'colorPlateControlPanel',
+    ];
     panels.splice(
       panels.findIndex(e => e === id),
       1
@@ -1041,7 +1052,13 @@ export default class GameOfLife extends Component {
                 imgTag.removeAttribute('style');
                 reader.onload = e => {
                   imgTag.src = e.target.result;
+                  extractColors(e.target.result, { saturationImportance: 0, splitPower: 5, distance: 0.1, pixels: 100 })
+                    .then(e => {
+                      this.setState({ colorPlate: e.map((c, i) => <ColorPlate key={i} color={c.hex} that={this} />) });
+                    })
+                    .catch(console.log);
                   document.getElementById('imageLayer').style.display = 'block';
+                  document.getElementById('colorPlateControlPanel').style.display = 'block';
                 };
                 reader.readAsDataURL(selectedFile);
               }
@@ -1435,6 +1452,33 @@ export default class GameOfLife extends Component {
           </button>
         </div>
 
+        <div id='colorPlateControlPanel' className='controlPanel'>
+          <div
+            id='grabPad'
+            onMouseDown={e => {
+              const el = document.getElementById('colorPlateControlPanel');
+              this.findPanelsPos('colorPlateControlPanel');
+              windowLeft = el.getBoundingClientRect().left - e.clientX;
+              windowTop = el.getBoundingClientRect().top - e.clientY;
+              window.addEventListener('mousemove', this.grabColorPlate);
+            }}
+          >
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              enableBackground='new 0 0 24 24'
+              height='24px'
+              viewBox='0 0 24 24'
+              width='24px'
+              fill='#D7D7D7'
+            >
+              <path d='M20,9H4v2h16V9z M4,15h16v-2H4V15z' />
+            </svg>
+          </div>
+          <div className='devider'></div>
+          <p className='controlLabel'>Image colors</p>
+          {this.state.colorPlate}
+        </div>
+
         <PopUp></PopUp>
 
         <DownloadWindow
@@ -1638,4 +1682,16 @@ export default class GameOfLife extends Component {
       </>
     );
   }
+}
+
+function ColorPlate(props) {
+  return (
+    <button
+      className='colorPlateButtons'
+      style={{ backgroundColor: props.color }}
+      onClick={() => {
+        props.that.setState({ pixleColor: props.color });
+      }}
+    ></button>
+  );
 }
