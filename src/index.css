@@ -883,7 +883,7 @@ input[type='color']::-webkit-color-swatch {
   height: 22px;
 }
 #copyColorTxt,
-#copyColorButton {
+#copyColorButton, #autoFillTxt, #autoFillButton {
   display: none;
 }
 .randomColors {

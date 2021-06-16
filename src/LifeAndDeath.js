@@ -889,6 +889,27 @@ export default class GameOfLife extends Component {
     localStorage.setItem('gridHeight', newHeight);
   };
 
+  autoFill = () => {
+    const pixels = document.querySelectorAll('.lifeDeathPixels');
+    const img = document.getElementById('img');
+    const canvas = document.getElementById('can');
+    const fromLeft = document.getElementById('lifeDeathContainer').getBoundingClientRect().left;
+    const fromTop = document.getElementById('lifeDeathContainer').getBoundingClientRect().top;
+    
+    pixels.forEach(e => {
+      const x = e.getBoundingClientRect().left + this.state.pixelSize / 2 - fromLeft;
+      const y = e.getBoundingClientRect().top + this.state.pixelSize / 2 - fromTop;
+      
+      this.useCanvas(canvas, img, () => {
+        const p = canvas.getContext('2d').getImageData(x, y, 1, 1).data;
+        const color = this.RGBToHex(p[0], p[1], p[2]);
+        e.style.backgroundColor = color;
+        e.dataset.live = 'true';
+      });
+    });
+    this.readDrawing();
+  };
+
   imageColorPic = e => {
     const layer = document.getElementById('imageLayer');
     if (this.state.isColorCopy && window.getComputedStyle(layer).display === 'block') {
@@ -1099,6 +1120,8 @@ export default class GameOfLife extends Component {
                   document.getElementById('colorPlateControlPanel').style.display = 'block';
                   document.getElementById('copyColorButton').style.display = 'block';
                   document.getElementById('copyColorTxt').style.display = 'block';
+                  document.getElementById('autoFillButton').style.display = 'block';
+                  document.getElementById('autoFillTxt').style.display = 'block';
                 };
                 reader.readAsDataURL(selectedFile);
               }
@@ -1286,6 +1309,19 @@ export default class GameOfLife extends Component {
           </div>
 
           <div className='devider'></div>
+          <button
+            className='buttons'
+            id='autoFillButton'
+            title='Copy the image layer to your grid, make sure there are the same size'
+            onClick={this.autoFill}
+          >
+            <svg width='20' height='20' xmlns='http://www.w3.org/2000/svg' fillRule='evenodd' clipRule='evenodd' fill='#D7D7D7'>
+              <path d='M22 2l-2.5 1.4L17 2l1.4 2.5L17 7l2.5-1.4L22 7l-1.4-2.5zm-7.63 5.29c-.39-.39-1.02-.39-1.41 0L1.29 18.96c-.39.39-.39 1.02 0 1.41l2.34 2.34c.39.39 1.02.39 1.41 0L16.7 11.05c.39-.39.39-1.02 0-1.41l-2.33-2.35zm-1.03 5.49l-2.12-2.12 2.44-2.44 2.12 2.12-2.44 2.44z' />
+            </svg>
+          </button>
+          <p id='autoFillTxt' className='controlLabel'>
+            Auto fill
+          </p>
           <button
             className='buttons'
             id='copyColorButton'
