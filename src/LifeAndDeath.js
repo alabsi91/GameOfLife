@@ -22,13 +22,14 @@ let interval,
   extractedData;
 let undo = [];
 let redo = [];
-let xPos, yPos, xDif, yDif, drawDir, dirElem;
+let xPos, yPos, xDif, yDif, drawDir, dirElem, xColor, yColor;
 
 export default class GameOfLife extends Component {
   constructor(props) {
     super(props);
     this.state = {
       colorPlate: '',
+      isColorCopy: false,
       isPlaying: false,
       isPaused: false,
       drwaMode: false,
@@ -239,6 +240,7 @@ export default class GameOfLife extends Component {
 
       // eslint-disable-next-line no-loop-func
       element.addEventListener('mouseenter', e => {
+        this.imageColorPic(e);
         if (this.state.drwaMode && !this.state.eraser && !this.state.paintBuc && !this.state.shiftPressed) {
           this.symmetricalX(i);
           this.symmetricalY(i);
@@ -256,6 +258,7 @@ export default class GameOfLife extends Component {
       // eslint-disable-next-line no-loop-func
       element.addEventListener('mousedown', e => {
         this.setState({ isPaused: false });
+        this.imageColorPic(e);
         redo = [];
         if (!this.state.isPlaying && !this.state.eraser && !this.state.paintBuc && !this.state.shiftPressed) {
           this.symmetricalX(i);
@@ -886,6 +889,41 @@ export default class GameOfLife extends Component {
     localStorage.setItem('gridHeight', newHeight);
   };
 
+  imageColorPic = e => {
+    const layer = document.getElementById('imageLayer');
+    if (this.state.isColorCopy && window.getComputedStyle(layer).display === 'block') {
+      const img = document.getElementById('img');
+      const canvas = document.getElementById('can');
+      xColor = e.clientX - img.getBoundingClientRect().left;
+      yColor = e.clientY - img.getBoundingClientRect().top;
+
+      this.useCanvas(canvas, img, () => {
+        const p = canvas.getContext('2d').getImageData(xColor, yColor, 1, 1).data;
+        const color = this.RGBToHex(p[0], p[1], p[2]);
+        this.setState({ pixleColor: color });
+      });
+    }
+  };
+
+  useCanvas = (canvas, image, callback) => {
+    canvas.width = image.width;
+    canvas.height = image.height;
+    canvas.getContext('2d').drawImage(image, 0, 0, image.width, image.height);
+    return callback();
+  };
+
+  RGBToHex = (r, g, b) => {
+    r = r.toString(16);
+    g = g.toString(16);
+    b = b.toString(16);
+
+    if (r.length === 1) r = '0' + r;
+    if (g.length === 1) g = '0' + g;
+    if (b.length === 1) b = '0' + b;
+
+    return '#' + r + g + b;
+  };
+
   render() {
     return (
       <>
@@ -1059,6 +1097,8 @@ export default class GameOfLife extends Component {
                     .catch(console.log);
                   document.getElementById('imageLayer').style.display = 'block';
                   document.getElementById('colorPlateControlPanel').style.display = 'block';
+                  document.getElementById('copyColorButton').style.display = 'block';
+                  document.getElementById('copyColorTxt').style.display = 'block';
                 };
                 reader.readAsDataURL(selectedFile);
               }
@@ -1244,7 +1284,28 @@ export default class GameOfLife extends Component {
               <path d='M20,9H4v2h16V9z M4,15h16v-2H4V15z' />
             </svg>
           </div>
+
           <div className='devider'></div>
+          <button
+            className='buttons'
+            id='copyColorButton'
+            style={{
+              backgroundColor: this.state.isColorCopy ? '#383838' : 'initial',
+              border: this.state.isColorCopy ? 'solid 1px #636363' : 'none',
+            }}
+            title='Copy color from image layer'
+            onClick={() =>
+              this.state.isColorCopy ? this.setState({ isColorCopy: false }) : this.setState({ isColorCopy: true })
+            }
+          >
+            <svg width='20' height='20' xmlns='http://www.w3.org/2000/svg' fillRule='evenodd' clipRule='evenodd' fill='#D7D7D7'>
+              <path d='M18 4V3c0-.55-.45-1-1-1H5c-.55 0-1 .45-1 1v4c0 .55.45 1 1 1h12c.55 0 1-.45 1-1V6h1v4H9v11c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-9h8V4h-3z' />
+            </svg>
+          </button>
+          <p id='copyColorTxt' className='controlLabel'>
+            Copy
+          </p>
+
           <button
             className='buttons'
             style={{
@@ -1679,6 +1740,7 @@ export default class GameOfLife extends Component {
         </div>
 
         <div id='blured'></div>
+        <canvas id='can' style={{ display: 'none' }}></canvas>
       </>
     );
   }
