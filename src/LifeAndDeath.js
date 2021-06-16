@@ -893,24 +893,29 @@ export default class GameOfLife extends Component {
     const pixels = document.querySelectorAll('.lifeDeathPixels');
     const img = document.getElementById('img');
     const canvas = document.getElementById('can');
-    const fromLeft = document.getElementById('lifeDeathContainer').getBoundingClientRect().left;
-    const fromTop = document.getElementById('lifeDeathContainer').getBoundingClientRect().top;
-    
+    const fromLeft = img.getBoundingClientRect().left;
+    const fromTop = img.getBoundingClientRect().top;
+
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+
     pixels.forEach(e => {
       const x = e.getBoundingClientRect().left + this.state.pixelSize / 2 - fromLeft;
       const y = e.getBoundingClientRect().top + this.state.pixelSize / 2 - fromTop;
-      
-      this.useCanvas(canvas, img, () => {
+
+      if (x <= canvas.width && x >= 0 && y <= canvas.height && y >= 0) {
         const p = canvas.getContext('2d').getImageData(x, y, 1, 1).data;
         const color = this.RGBToHex(p[0], p[1], p[2]);
         e.style.backgroundColor = color;
         e.dataset.live = 'true';
-      });
+      }
     });
     this.readDrawing();
   };
 
   imageColorPic = e => {
+    let color;
     const layer = document.getElementById('imageLayer');
     if (this.state.isColorCopy && window.getComputedStyle(layer).display === 'block') {
       const img = document.getElementById('img');
@@ -918,19 +923,19 @@ export default class GameOfLife extends Component {
       xColor = e.clientX - img.getBoundingClientRect().left;
       yColor = e.clientY - img.getBoundingClientRect().top;
 
-      this.useCanvas(canvas, img, () => {
+      if (img.width === canvas.width && img.height === canvas.height) {
         const p = canvas.getContext('2d').getImageData(xColor, yColor, 1, 1).data;
-        const color = this.RGBToHex(p[0], p[1], p[2]);
+        color = this.RGBToHex(p[0], p[1], p[2]);
         this.setState({ pixleColor: color });
-      });
+      } else {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+        const p = canvas.getContext('2d').getImageData(xColor, yColor, 1, 1).data;
+        color = this.RGBToHex(p[0], p[1], p[2]);
+      }
+      this.setState({ pixleColor: color });
     }
-  };
-
-  useCanvas = (canvas, image, callback) => {
-    canvas.width = image.width;
-    canvas.height = image.height;
-    canvas.getContext('2d').drawImage(image, 0, 0, image.width, image.height);
-    return callback();
   };
 
   RGBToHex = (r, g, b) => {
@@ -1118,10 +1123,6 @@ export default class GameOfLife extends Component {
                     .catch(console.log);
                   document.getElementById('imageLayer').style.display = 'block';
                   document.getElementById('colorPlateControlPanel').style.display = 'block';
-                  document.getElementById('copyColorButton').style.display = 'block';
-                  document.getElementById('copyColorTxt').style.display = 'block';
-                  document.getElementById('autoFillButton').style.display = 'block';
-                  document.getElementById('autoFillTxt').style.display = 'block';
                 };
                 reader.readAsDataURL(selectedFile);
               }
@@ -1309,39 +1310,6 @@ export default class GameOfLife extends Component {
           </div>
 
           <div className='devider'></div>
-          <button
-            className='buttons'
-            id='autoFillButton'
-            title='Copy the image layer to your grid, make sure there are the same size'
-            onClick={this.autoFill}
-          >
-            <svg width='20' height='20' xmlns='http://www.w3.org/2000/svg' fillRule='evenodd' clipRule='evenodd' fill='#D7D7D7'>
-              <path d='M22 2l-2.5 1.4L17 2l1.4 2.5L17 7l2.5-1.4L22 7l-1.4-2.5zm-7.63 5.29c-.39-.39-1.02-.39-1.41 0L1.29 18.96c-.39.39-.39 1.02 0 1.41l2.34 2.34c.39.39 1.02.39 1.41 0L16.7 11.05c.39-.39.39-1.02 0-1.41l-2.33-2.35zm-1.03 5.49l-2.12-2.12 2.44-2.44 2.12 2.12-2.44 2.44z' />
-            </svg>
-          </button>
-          <p id='autoFillTxt' className='controlLabel'>
-            Auto fill
-          </p>
-          <button
-            className='buttons'
-            id='copyColorButton'
-            style={{
-              backgroundColor: this.state.isColorCopy ? '#383838' : 'initial',
-              border: this.state.isColorCopy ? 'solid 1px #636363' : 'none',
-            }}
-            title='Copy color from image layer'
-            onClick={() =>
-              this.state.isColorCopy ? this.setState({ isColorCopy: false }) : this.setState({ isColorCopy: true })
-            }
-          >
-            <svg width='20' height='20' xmlns='http://www.w3.org/2000/svg' fillRule='evenodd' clipRule='evenodd' fill='#D7D7D7'>
-              <path d='M18 4V3c0-.55-.45-1-1-1H5c-.55 0-1 .45-1 1v4c0 .55.45 1 1 1h12c.55 0 1-.45 1-1V6h1v4H9v11c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-9h8V4h-3z' />
-            </svg>
-          </button>
-          <p id='copyColorTxt' className='controlLabel'>
-            Copy
-          </p>
-
           <button
             className='buttons'
             style={{
@@ -1571,6 +1539,33 @@ export default class GameOfLife extends Component {
               <path d='M20,9H4v2h16V9z M4,15h16v-2H4V15z' />
             </svg>
           </div>
+          <div className='devider'></div>
+          <button
+            className='buttons'
+            title='Copy the image layer to your grid, make sure there are the same size'
+            onClick={this.autoFill}
+          >
+            <svg width='20' height='20' xmlns='http://www.w3.org/2000/svg' fillRule='evenodd' clipRule='evenodd' fill='#D7D7D7'>
+              <path d='M22 2l-2.5 1.4L17 2l1.4 2.5L17 7l2.5-1.4L22 7l-1.4-2.5zm-7.63 5.29c-.39-.39-1.02-.39-1.41 0L1.29 18.96c-.39.39-.39 1.02 0 1.41l2.34 2.34c.39.39 1.02.39 1.41 0L16.7 11.05c.39-.39.39-1.02 0-1.41l-2.33-2.35zm-1.03 5.49l-2.12-2.12 2.44-2.44 2.12 2.12-2.44 2.44z' />
+            </svg>
+          </button>
+          <p className='controlLabel'>Auto fill</p>
+          <button
+            className='buttons'
+            style={{
+              backgroundColor: this.state.isColorCopy ? '#383838' : 'initial',
+              border: this.state.isColorCopy ? 'solid 1px #636363' : 'none',
+            }}
+            title='Copy color from image layer'
+            onClick={() =>
+              this.state.isColorCopy ? this.setState({ isColorCopy: false }) : this.setState({ isColorCopy: true })
+            }
+          >
+            <svg width='20' height='20' xmlns='http://www.w3.org/2000/svg' fillRule='evenodd' clipRule='evenodd' fill='#D7D7D7'>
+              <path d='M18 4V3c0-.55-.45-1-1-1H5c-.55 0-1 .45-1 1v4c0 .55.45 1 1 1h12c.55 0 1-.45 1-1V6h1v4H9v11c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-9h8V4h-3z' />
+            </svg>
+          </button>
+          <p className='controlLabel'>Copy</p>
           <div className='devider'></div>
           <p className='controlLabel'>Image colors</p>
           {this.state.colorPlate}
