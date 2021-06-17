@@ -1,5 +1,4 @@
 import { createGIF } from 'gifshot';
-import html2canvas from 'html2canvas';
 import { saveAs } from 'file-saver';
 import React, { Component } from 'react';
 import FFmpeg from '@ffmpeg/ffmpeg';
@@ -45,16 +44,12 @@ export default class DownloadWindow extends Component {
   };
 
   captureImgs = async (frmaes, interval, delay, backwards) => {
-    const el = document.querySelector('#lifeDeathContainer');
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
-    const recordAnimation = document.getElementById('recordAnimation');
     const downloadAnimation = document.getElementById('downloadAnimation');
-    const frameCountEl = document.getElementById('frameCount');
     const isMP4 = document.getElementById('downloadVideo').checked ? true : false;
     const imgs = [];
     for (let i = 1; i <= frmaes; i++) {
-      frameCountEl.innerHTML = i;
-      await html2canvas(el).then(canvas => imgs.push(canvas.toDataURL('image/png')));
+      await this.props.toCanvas().then(canvas => imgs.push(canvas.toDataURL('image/png')));
       this.props.renderLifeDeath();
     }
     if (delay) for (let i = 0; i < delay; i++) imgs.unshift(imgs[0]);
@@ -65,7 +60,6 @@ export default class DownloadWindow extends Component {
       imgs.push(...revArray);
     }
 
-    recordAnimation.style.display = 'none';
     downloadAnimation.style.display = 'block';
 
     createGIF(
@@ -88,7 +82,7 @@ export default class DownloadWindow extends Component {
 
   downloadImg = () => {
     this.props.pauseRender();
-    html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 1 }).then(canvas => {
+    this.props.toCanvas().then(canvas => {
       canvas.toBlob(e => {
         saveAs(e, 'Game of life ' + Date.now());
       }, 'image/png');
@@ -122,7 +116,6 @@ export default class DownloadWindow extends Component {
 
   downloadButtonHandle = () => {
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
-    const recordAnimation = document.getElementById('recordAnimation');
     const isPNG = document.getElementById('downloadPNG').checked ? true : false;
     const isBounce = document.getElementById('gifBounce').checked ? true : false;
     const frames = Number(document.getElementById('gifFrames').value);
@@ -132,7 +125,6 @@ export default class DownloadWindow extends Component {
       this.downloadImg();
       this.toggleDownloadWindow();
     } else {
-      recordAnimation.style.display = 'block';
       buttons.forEach(e => (e.disabled = true));
       this.captureImgs(frames, inval, delay, isBounce);
     }

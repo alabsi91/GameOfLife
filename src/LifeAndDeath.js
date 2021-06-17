@@ -1,4 +1,3 @@
-import html2canvas from 'html2canvas';
 import React, { Component } from 'react';
 import { pattrens } from './pattrens';
 import { saveAs } from 'file-saver';
@@ -473,7 +472,8 @@ export default class GameOfLife extends Component {
 
   copyToClipBoard = () => {
     this.pauseRender();
-    html2canvas(document.querySelector('#lifeDeathContainer')).then(canvas => {
+    this.toCanvas().then(canvas => {
+      console.log(canvas);
       canvas.toBlob(e => {
         navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
           if (result.state === 'granted' || result.state === 'prompt') {
@@ -569,7 +569,7 @@ export default class GameOfLife extends Component {
     };
     pixels.forEach(e => newSave.livePixels.push(Number(e.dataset.pos)));
     pixels.forEach(e => newSave.pixelsColors.push(window.getComputedStyle(e).backgroundColor));
-    html2canvas(document.querySelector('#lifeDeathContainer'), { scale: 0.5 }).then(canvas => {
+    this.toCanvas().then(canvas => {
       const dataURL = canvas.toDataURL('image/png');
       newSave.drawngImg = dataURL;
       if (localStorage.getItem('saved')) {
@@ -950,9 +950,59 @@ export default class GameOfLife extends Component {
     return '#' + r + g + b;
   };
 
+  toCanvas = async () => {
+    const canvas = document.getElementById('can');
+    const pSize = this.state.pixelSize;
+    const margin = this.state.pixelSpace;
+    const pColor = this.state.backgroundPixleColor;
+    const strokeColor = this.state.betweenPixleColor;
+    const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
+
+    let reg = [[], []];
+    pixels.forEach(e => {
+      reg[0].push(Number(e.dataset.pos));
+      reg[1].push(window.getComputedStyle(e).backgroundColor);
+    });
+
+    canvas.width = this.state.gridWidth * (margin * 2 + pSize);
+    canvas.height = this.state.gridHeight * (margin * 2 + pSize);
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = strokeColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = pColor;
+    let raw = 0;
+    let pos = 0;
+    for (let x = margin; x < canvas.width; x = x + (margin * 2 + pSize)) {
+      if (reg[0].includes(pos)) {
+        const ind = reg[0].indexOf(pos);
+        ctx.fillStyle = reg[1][ind];
+      } else {
+        ctx.fillStyle = pColor;
+      }
+      ctx.fillRect(x, margin, pSize, pSize);
+      raw = raw + 1;
+
+      for (let y = margin * 3 + pSize; y < canvas.height; y = y + (margin * 2 + pSize)) {
+        pos = pos + this.state.gridWidth;
+        if (reg[0].includes(pos)) {
+          const ind = reg[0].indexOf(pos);
+          ctx.fillStyle = reg[1][ind];
+        } else {
+          ctx.fillStyle = pColor;
+        }
+        ctx.fillRect(x, y, pSize, pSize);
+      }
+      pos = raw;
+    }
+    return canvas;
+  };
+
   render() {
     return (
       <>
+
         <div id='controlPanel' className='controlPanel'>
           <div
             id='grabPad'
@@ -1580,6 +1630,7 @@ export default class GameOfLife extends Component {
           gridHeight={this.state.gridHeight}
           pixelSize={this.state.pixelSize}
           pixelSpace={this.state.pixelSpace}
+          toCanvas= {this.toCanvas}
         ></DownloadWindow>
 
         <div id='saveWindow'>
