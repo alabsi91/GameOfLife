@@ -149,9 +149,6 @@ export default class DownloadWindow extends Component {
             </svg>
           </button>
         </div>
-        <div id='recordAnimation'>
-          <p id='frameCount'>0</p>
-        </div>
         <div id='downloadAnimation'>
           <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
             <path d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z' />
