@@ -80,9 +80,9 @@ export default class DownloadWindow extends Component {
     );
   };
 
-  downloadImg = () => {
+  downloadImg = transparent => {
     this.props.pauseRender();
-    this.props.toCanvas().then(canvas => {
+    this.props.toCanvas(transparent).then(canvas => {
       canvas.toBlob(e => {
         saveAs(e, 'Game of life ' + Date.now());
       }, 'image/png');
@@ -121,8 +121,9 @@ export default class DownloadWindow extends Component {
     const frames = Number(document.getElementById('gifFrames').value);
     const inval = Number(document.getElementById('gifInterval').value);
     const delay = Number(document.getElementById('gifDelay').value);
+    const transparent = document.getElementById('transparentPNG').checked ? true : false;
     if (isPNG) {
-      this.downloadImg();
+      this.downloadImg(transparent);
       this.toggleDownloadWindow();
     } else {
       buttons.forEach(e => (e.disabled = true));
@@ -164,12 +165,15 @@ export default class DownloadWindow extends Component {
           defaultChecked
           onChange={e => {
             const el = document.querySelectorAll('#gifDownlaodSettings input');
+            document.getElementById('transparentPNG').disabled = false;
             e.target.checked
               ? el.forEach(element => (element.disabled = true))
               : el.forEach(element => (element.disabled = false));
           }}
         ></input>
         <label htmlFor='downloadPNG'>Download as png file.</label>
+        <input id='transparentPNG' type='checkbox' name='transparentPNG'></input>
+        <label htmlFor='transparentPNG'>Transparent PNG</label>
         <br></br>
         <input
           type='radio'
@@ -181,6 +185,7 @@ export default class DownloadWindow extends Component {
             e.target.checked
               ? el.forEach(element => (element.disabled = false))
               : el.forEach(element => (element.disabled = true));
+            document.getElementById('transparentPNG').disabled = true;
           }}
         ></input>
         <label htmlFor='downloadGIF'>Download as animated gif file.</label>
@@ -195,6 +200,7 @@ export default class DownloadWindow extends Component {
             e.target.checked
               ? el.forEach(element => (element.disabled = false))
               : el.forEach(element => (element.disabled = true));
+            document.getElementById('transparentPNG').disabled = true;
           }}
         ></input>
         <label htmlFor='downloadGIF'>Download as mp4 video file.</label>

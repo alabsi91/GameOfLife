@@ -950,7 +950,7 @@ export default class GameOfLife extends Component {
     return '#' + r + g + b;
   };
 
-  toCanvas = async () => {
+  toCanvas = async transparent => {
     const canvas = document.getElementById('can');
     const pSize = this.state.pixelSize;
     const margin = this.state.pixelSpace;
@@ -978,10 +978,12 @@ export default class GameOfLife extends Component {
       if (reg[0].includes(pos)) {
         const ind = reg[0].indexOf(pos);
         ctx.fillStyle = reg[1][ind];
+        ctx.fillRect(x, margin, pSize, pSize);
       } else {
         ctx.fillStyle = pColor;
+        ctx.fillRect(x, margin, pSize, pSize);
+        if (transparent) ctx.clearRect(x, margin, pSize, pSize);
       }
-      ctx.fillRect(x, margin, pSize, pSize);
       raw = raw + 1;
 
       for (let y = margin * 3 + pSize; y < canvas.height; y = y + (margin * 2 + pSize)) {
@@ -989,10 +991,12 @@ export default class GameOfLife extends Component {
         if (reg[0].includes(pos)) {
           const ind = reg[0].indexOf(pos);
           ctx.fillStyle = reg[1][ind];
+          ctx.fillRect(x, y, pSize, pSize);
         } else {
           ctx.fillStyle = pColor;
+          ctx.fillRect(x, y, pSize, pSize);
+          if (transparent) ctx.clearRect(x, y, pSize, pSize);
         }
-        ctx.fillRect(x, y, pSize, pSize);
       }
       pos = raw;
     }
@@ -1002,7 +1006,6 @@ export default class GameOfLife extends Component {
   render() {
     return (
       <>
-
         <div id='controlPanel' className='controlPanel'>
           <div
             id='grabPad'
@@ -1630,7 +1633,7 @@ export default class GameOfLife extends Component {
           gridHeight={this.state.gridHeight}
           pixelSize={this.state.pixelSize}
           pixelSpace={this.state.pixelSpace}
-          toCanvas= {this.toCanvas}
+          toCanvas={this.toCanvas}
         ></DownloadWindow>
 
         <div id='saveWindow'>

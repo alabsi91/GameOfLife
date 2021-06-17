@@ -198,6 +198,11 @@ p {
 #downloadWindow > input {
   margin: 15px 15px;
 }
+#transparentPNG {
+  margin: 0 !important;
+  margin-left: 10px !important;
+  margin-right: 5px !important;
+}
 #downloadWindow label {
   font-size: 14px;
   color: #d7d7d7;
@@ -883,7 +888,9 @@ input[type='color']::-webkit-color-swatch {
   height: 22px;
 }
 #copyColorTxt,
-#copyColorButton, #autoFillTxt, #autoFillButton {
+#copyColorButton,
+#autoFillTxt,
+#autoFillButton {
   display: none;
 }
 .randomColors {
