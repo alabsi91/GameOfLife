@@ -8,15 +8,7 @@ import DownloadWindow from './DownloadWindow';
 import extractColors from 'extract-colors';
 import { colorToArr, requestNum } from 'request-animation-number';
 
-let interval,
-  lastPaint,
-  lastPaintColors,
-  lastPaintGrid,
-  windowTop,
-  windowLeft,
-  isWindowOpened,
-  panelsPos,
-  extractedData;
+let interval, lastPaint, lastPaintColors, lastPaintGrid, windowTop, windowLeft, isWindowOpened, panelsPos, extractedData;
 let undo = [];
 let redo = [];
 let xPos, yPos, xDif, yDif, drawDir, dirElem, xColor, yColor;
@@ -63,6 +55,7 @@ export default class GameOfLife extends Component {
         );
       } else this.applyPattren(getLastPaint, getLastPaintColros, getLastPaintGrid[0]);
     }
+
     const grabHandles = [
       this.grabGrid,
       this.grabSave,
@@ -80,7 +73,42 @@ export default class GameOfLife extends Component {
     window.addEventListener('mouseup', () => grabHandles.forEach(e => window.removeEventListener('mousemove', e)));
     this.keyboardShourtcuts();
     this.readDrawing();
+    this.dropImage();
   }
+
+  dropImage = () => {
+    const preventDefault = e => {
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    window.addEventListener('dragenter', preventDefault, false);
+    window.addEventListener('dragexit', preventDefault, false);
+    window.addEventListener('dragover', preventDefault, false);
+
+    window.addEventListener('drop', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      const imgTag = document.getElementById('img');
+      const selectedFile = e.dataTransfer.files[0];
+      if (selectedFile?.type?.includes('image')) {
+        const reader = new FileReader();
+        imgTag.removeAttribute('style');
+        reader.onload = e => {
+          document.getElementById('imageLayer').style.display = 'block';
+          document.getElementById('colorPlateControlPanel').style.display = 'block';
+          imgTag.src = e.target.result;
+          extractColors(e.target.result, { saturationImportance: 0, splitPower: 5, distance: 0.1, pixels: 100 })
+            .then(e => {
+              this.setState({ colorPlate: e.map((c, i) => <ColorPlate key={i} color={c.hex} that={this} />) });
+            })
+            .catch(console.log);
+        };
+        reader.readAsDataURL(selectedFile);
+      } else {
+        this.openPopUp('Only Image files are acceptable');
+      }
+    });
+  };
 
   keyboardShourtcuts = () => {
     window.addEventListener('keydown', e => {
