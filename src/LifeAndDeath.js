@@ -14,8 +14,6 @@ let interval,
   lastPaintGrid,
   windowTop,
   windowLeft,
-  lineTop,
-  lineLeft,
   isWindowOpened,
   panelsPos,
   extractedData;
@@ -423,8 +421,11 @@ export default class GameOfLife extends Component {
   };
 
   trackMouse = l => {
-    document.getElementById('MouseHorizenLine').style.top = `${l.clientY - lineTop}px`;
-    document.getElementById('MouseVerticalLine').style.left = `${l.clientX - lineLeft}px`;
+    const container = document.getElementById('lifeDeathContainer');
+    const top = container.getBoundingClientRect().top;
+    const left = container.getBoundingClientRect().left;
+    document.getElementById('MouseHorizenLine').style.top = `${l.pageY - top - window.scrollY}px`;
+    document.getElementById('MouseVerticalLine').style.left = `${l.pageX - left - window.scrollX}px`;
   };
 
   stickyGrapHandle = (l, el) => {
@@ -1785,8 +1786,6 @@ export default class GameOfLife extends Component {
             }}
             onMouseEnter={e => {
               if (!this.state.isPlaying) {
-                lineTop = e.target.getBoundingClientRect().top;
-                lineLeft = e.target.getBoundingClientRect().left;
                 document.getElementById('MouseHorizenLine').style.display = 'block';
                 document.getElementById('MouseVerticalLine').style.display = 'block';
                 window.addEventListener('mousemove', this.trackMouse);
