@@ -1032,9 +1032,95 @@ export default class GameOfLife extends Component {
     return canvas;
   };
 
+  testCanvas = () => {
+    const canvas = document.getElementById('can');
+    const [width, height, margin, pxSize, marginColor, bgColor, pxColor, symColor] = [
+      this.state.gridWidth,
+      this.state.gridHeight,
+      this.state.pixelSpace,
+      this.state.pixelSize,
+      this.state.betweenPixleColor,
+      this.state.backgroundPixleColor,
+      this.state.pixleColor,
+      this.state.SymmetryLinesColor,
+    ];
+
+    canvas.width = width * (margin * 2 + pxSize);
+    canvas.height = height * (margin * 2 + pxSize);
+    const ctx = canvas.getContext('2d', { alpha: false });
+    if (margin !== 0) ctx.translate(0.5, 0.5);
+
+    ctx.fillStyle = marginColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = symColor;
+    width % 2 !== 0
+      ? ctx.fillRect(canvas.width / 2 - (margin * 2 + pxSize / 2), 0, margin * 4 + pxSize, canvas.height)
+      : ctx.fillRect(canvas.width / 2 - margin, 0, margin * 2, canvas.height);
+    height % 2 !== 0
+      ? ctx.fillRect(0, canvas.height / 2 - (margin * 2 + pxSize / 2), canvas.width, margin * 4 + pxSize)
+      : ctx.fillRect(0, canvas.height / 2 - margin, canvas.width, margin * 2);
+
+    ctx.fillStyle = bgColor;
+    for (let x = margin; x < canvas.width; x = x + (margin * 2 + pxSize)) {
+      ctx.fillRect(x, margin, pxSize, pxSize);
+      for (let y = margin * 3 + pxSize; y < canvas.height; y = y + (margin * 2 + pxSize)) {
+        ctx.fillRect(x, y, pxSize, pxSize);
+      }
+    }
+
+    canvas.addEventListener('mousemove', e => {
+      const top = canvas.getBoundingClientRect().top;
+      const p = getPos(getSquare(e.clientX, e.clientY - top));
+      ctx.fillStyle = pxColor;
+      ctx.fillRect(p.x, p.y, pxSize, pxSize);
+    });
+
+    const getPos = p => {
+      const findRow = ~~(p / width);
+      const findColumn = p - findRow * width;
+      const x = findColumn * (pxSize + margin * 2) + margin;
+      const y = findRow * (pxSize + margin * 2) + margin;
+      return { x: x, y: y };
+    };
+
+    const getSquare = (x, y) => {
+      const row = ~~(y / (pxSize + margin * 2));
+      const column = ~~(x / (pxSize + margin * 2));
+      const pos = row * width + column;
+      return pos;
+    };
+
+    const checkLive = (x, y) => {
+      const data = ctx.getImageData(x + pxSize / 2, y + pxSize / 2, 1, 1).data;
+      const isLive = this.RGBToHex(data[0], data[1], data[2]) === pxColor;
+      return isLive;
+    };
+
+    const getLive = () => {
+      let lives = [];
+      for (let i = 0; i < width * height; i++) {
+        const p = getPos(i);
+        if (checkLive(p.x, p.y)) lives.push(i);
+      }
+      return lives;
+    };
+    const toLive = (p, color) => {
+      const pos = getPos(p);
+      ctx.fillStyle = color ? color : pxColor;
+      ctx.fillRect(pos.x, pos.y, pxSize, pxSize);
+    };
+    window.addEventListener('keydown', () => {
+      undo[undo.length - 1][0].forEach((e, i) => {
+        toLive(e, undo[undo.length - 1][1][i]);
+      });
+    });
+  };
+
   render() {
     return (
       <>
+        <button onClick={this.testCanvas}>test</button>
         <div id='controlPanel' className='controlPanel'>
           <div
             id='grabPad'
@@ -1852,7 +1938,7 @@ export default class GameOfLife extends Component {
         </div>
 
         <div id='blured'></div>
-        <canvas id='can' style={{ display: 'none' }}></canvas>
+        <canvas id='can' style={{ display: 'block' }}></canvas>
       </>
     );
   }
