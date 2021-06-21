@@ -36,23 +36,30 @@ export default class DownloadWindow extends Component {
     }
   };
 
-  grabDownload = (l, el) => {
+  grabDownload = l => {
     l.preventDefault();
     const grabEl = document.getElementById('downloadWindow');
     grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
     grabEl.style.left = `${l.pageX + windowLeft}px`;
   };
 
+  delay = ms => new Promise(res => setTimeout(res, ms));
+
   captureImgs = async (frmaes, interval, delay, backwards) => {
     const canvas = document.getElementById('canvas');
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
     const downloadAnimation = document.getElementById('downloadAnimation');
+    const recordAnimation = document.getElementById('recordAnimation');
     const isMP4 = document.getElementById('downloadVideo').checked ? true : false;
     const imgs = [];
+
+    recordAnimation.style.display = 'block';
     for (let i = 1; i <= frmaes; i++) {
       imgs.push(canvas.toDataURL('image/png'));
       this.props.renderLifeDeath(true);
+      await this.delay(2);
     }
+
     if (delay) for (let i = 0; i < delay; i++) imgs.unshift(imgs[0]);
 
     if (backwards) {
@@ -61,6 +68,7 @@ export default class DownloadWindow extends Component {
       imgs.push(...revArray);
     }
 
+    recordAnimation.style.display = 'none';
     downloadAnimation.style.display = 'block';
 
     createGIF(
@@ -157,6 +165,7 @@ export default class DownloadWindow extends Component {
             </svg>
           </button>
         </div>
+        <div id='recordAnimation'></div>
         <div id='downloadAnimation'>
           <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
             <path d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z' />
