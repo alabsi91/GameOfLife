@@ -6,12 +6,13 @@ import LoadCards from './LoadCards';
 import PopUp from './PopUp';
 import DownloadWindow from './DownloadWindow';
 import extractColors from 'extract-colors';
-import { colorToArr, requestNum } from 'request-animation-number';
+import { requestNum } from 'request-animation-number';
 
 let interval, lastPaint, lastPaintColors, lastPaintGrid, windowTop, windowLeft, isWindowOpened, panelsPos, extractedData;
 let undo = [];
 let redo = [];
 let xPos, yPos, xDif, yDif, drawDir, dirElem, xColor, yColor;
+let canvasData;
 
 export default class GameOfLife extends Component {
   constructor(props) {
@@ -44,7 +45,7 @@ export default class GameOfLife extends Component {
   }
 
   componentDidMount() {
-    this.appendDivs(this.state.gridWidth, this.state.gridHeight);
+    this.appendCanvas();
     if (localStorage.getItem('lastPaint')) {
       const getLastPaint = JSON.parse(localStorage.getItem('lastPaint'));
       const getLastPaintColros = JSON.parse(localStorage.getItem('lastPaintColors'));
@@ -136,85 +137,45 @@ export default class GameOfLife extends Component {
     });
   };
 
-  undo = async () => {
-    if (undo.length > 0) {
-      const last = undo.length - 1;
-      const width = this.state.gridWidth;
-      const height = this.state.gridHeight;
-      if (undo[last - 1]?.[2]) {
-        if (width !== undo[last - 1][2][0]) await this.changeGridWidth(undo[last - 1][2][0], true);
-        if (height !== undo[last - 1][2][1]) await this.changeGridHeight(undo[last - 1][2][1]);
-      }
-      const pixels = document.querySelectorAll('.lifeDeathPixels');
-      pixels.forEach(e => {
-        e.style.backgroundColor = this.state.backgroundPixleColor;
-        e.removeAttribute('data-live');
+  undo = () => {
+    const last = undo.length - 1;
+    if (undo.length > 1) {
+      this.setState({ gridWidth: undo[last - 1][2][0], gridHeight: undo[last - 1][2][1] }, () => {
+        this.applyPattren(undo[last - 1]?.[0], undo[last - 1]?.[1], undo[last - 1]?.[2]?.[0]);
+        redo.push(undo[last]);
+        undo.splice(last, 1);
       });
-      undo[last - 1]?.[0].forEach((e, i) => {
-        pixels[e].style.backgroundColor = undo[last - 1]?.[1][i];
-        pixels[e].dataset.live = 'true';
-      });
-
-      redo.push(undo[last]);
-      undo.splice(last, 1);
     }
   };
 
-  redo = async () => {
+  redo = () => {
     if (redo.length > 0) {
       const last = redo.length - 1;
-      const width = this.state.gridWidth;
-      const height = this.state.gridHeight;
-      if (redo[last]?.[2]) {
-        if (width !== redo[last][2][0]) await this.changeGridWidth(redo[last][2][0], true);
-        if (height !== redo[last][2][1]) await this.changeGridHeight(redo[last][2][1]);
-      }
-
-      const pixels = document.querySelectorAll('.lifeDeathPixels');
-      pixels.forEach(e => {
-        e.style.backgroundColor = this.state.backgroundPixleColor;
-        e.removeAttribute('data-live');
+      this.setState({ gridWidth: redo[last][2][0], gridHeight: redo[last][2][1] }, () => {
+        this.applyPattren(redo[last][0], redo[last][1], redo[last][2][0]);
+        undo.push(redo[last]);
+        redo.splice(last, 1);
       });
-      redo[last][0].forEach((e, i) => {
-        pixels[e].style.backgroundColor = redo[last][1][i];
-        pixels[e].dataset.live = 'true';
-      });
-      undo.push(redo[last]);
-      redo.splice(last, 1);
     }
   };
 
   readDrawing = () => {
-    const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
     const width = this.state.gridWidth;
     const height = this.state.gridHeight;
-    let reg = [[], []];
-    pixels.forEach(e => {
-      reg[0].push(Number(e.dataset.pos));
-      reg[1].push(window.getComputedStyle(e).backgroundColor);
-    });
-    reg.push([width, height]);
+    const lives = this.getLivePixels();
+    const reg = [lives[0], lives[1], [width, height]];
     undo.push(reg);
   };
 
   applyPattren = (patren, colors, pWidth, x, y) => {
-    const pixels = document.querySelectorAll('.lifeDeathPixels');
-    pixels.forEach(e => {
-      e.style.backgroundColor = this.state.backgroundPixleColor;
-      e.removeAttribute('data-live');
-    });
+    this.drawCanvas();
     const dif = this.state.gridWidth - pWidth;
     const moveX = x ? ~~(this.state.gridWidth / 2) - x : 0;
     const moveY = y ? ~~this.state.gridWidth * (~~(this.state.gridHeight / 2) - y) : 0;
     const centre = moveX + moveY;
     patren.forEach((e, i) => {
       let div = Math.floor(e / pWidth) * dif;
-      if (pixels[e + div + centre]) {
-        this.state.isRandomColor
-          ? (pixels[e + div + centre].style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 40%, 1)`)
-          : (pixels[e + div + centre].style.backgroundColor = colors ? colors[i] : this.state.pixleColor);
-        pixels[e + div + centre].dataset.live = 'true';
-      }
+      this.toLive(e + div + centre, colors ? colors[i] : this.state.pixleColor);
     });
   };
 
@@ -223,11 +184,10 @@ export default class GameOfLife extends Component {
       const findRow = ~~(i / this.state.gridWidth) * this.state.gridWidth;
       const middleRow = findRow + Math.floor(this.state.gridWidth / 2);
       const findOp = Number.isInteger(this.state.gridWidth / 2) ? middleRow - (i - middleRow + 1) : middleRow - (i - middleRow);
-      const pixel = document.querySelectorAll(`.lifeDeathPixels[data-pos="${findOp}"]`)[0];
       if (this.state.eraser) {
-        this.toDeath(pixel);
+        this.toDeath(findOp);
       } else {
-        this.toLive(pixel);
+        this.toLive(findOp);
       }
     }
   };
@@ -240,83 +200,290 @@ export default class GameOfLife extends Component {
       const findOp = Number.isInteger(this.state.gridHeight / 2)
         ? i + findDef * this.state.gridWidth * 2 - this.state.gridWidth
         : i + findDef * this.state.gridWidth * 2;
-      const pixel = document.querySelectorAll(`.lifeDeathPixels[data-pos="${findOp}"]`)[0];
       if (this.state.eraser) {
-        this.toDeath(pixel);
+        this.toDeath(findOp);
       } else {
-        this.toLive(pixel);
+        this.toLive(findOp);
       }
       return findOp;
     }
   };
 
-  appendDivs = (grid, height, indx) => {
-    indx = indx || 0;
-    const container = document.getElementById('lifeDeathContainer');
-    for (let i = indx; i < grid * height; i++) {
-      const element = document.createElement('div');
-      element.className = 'lifeDeathPixels';
-      element.dataset.pos = i;
-      element.style.margin = this.state.pixelSpace + 'px';
-      element.style.backgroundColor = this.state.backgroundPixleColor;
-      element.style.width = this.state.pixelSize + 'px';
-      element.style.height = this.state.pixelSize + 'px';
-      if (process.env.NODE_ENV === 'development') element.setAttribute('title', i);
+  drawCanvas = () => {
+    const canvas = document.getElementById('canvas');
+    const [width, height, margin, pxSize, bgColor] = [
+      this.state.gridWidth,
+      this.state.gridHeight,
+      this.state.pixelSpace,
+      this.state.pixelSize,
+      this.state.backgroundPixleColor,
+    ];
 
-      // eslint-disable-next-line no-loop-func
-      element.addEventListener('mouseenter', e => {
-        this.imageColorPic(e);
-        if (this.state.drwaMode && !this.state.eraser && !this.state.paintBuc && !this.state.shiftPressed) {
-          this.symmetricalX(i);
-          this.symmetricalY(i);
-          if (this.state.symmetricalY && this.state.symmetricalX && !this.state.shiftPressed)
-            this.symmetricalX(this.symmetricalY(i));
-          this.toLive(e.target);
-        } else if (this.state.drwaMode && this.state.eraser && !this.state.shiftPressed) {
-          this.symmetricalX(i);
-          this.symmetricalY(i);
-          if (this.state.symmetricalY && this.state.symmetricalX && !this.state.shiftPressed)
-            this.symmetricalX(this.symmetricalY(i));
-          this.toDeath(e.target);
-        }
-      });
-      // eslint-disable-next-line no-loop-func
-      element.addEventListener('mousedown', e => {
-        this.setState({ isPaused: false });
-        this.imageColorPic(e);
-        redo = [];
-        if (!this.state.isPlaying && !this.state.eraser && !this.state.paintBuc && !this.state.shiftPressed) {
-          this.symmetricalX(i);
-          this.symmetricalY(i);
-          if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i));
-          this.toLive(e.target);
-        } else if (!this.state.isPlaying && this.state.eraser && !this.state.paintBuc && !this.state.shiftPressed) {
-          this.symmetricalX(i);
-          this.symmetricalY(i);
-          if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(i));
-          this.toDeath(e.target);
-        } else if (!this.state.isPlaying && this.state.paintBuc && !this.state.shiftPressed) {
-          this.paintBuc(i);
-        } else if (this.state.shiftPressed && !this.state.paintBuc) {
-          if (!dirElem) dirElem = i;
-          xPos = e.x;
-          yPos = e.y;
-          window.addEventListener('mousemove', this.shiftDraw);
-        }
-      });
-      container.appendChild(element);
+    canvas.width = width * (margin * 2 + pxSize);
+    canvas.height = height * (margin * 2 + pxSize);
+    const ctx = canvas.getContext('2d');
+    if (margin !== 0) ctx.translate(0.5, 0.5);
+
+    this.drawSym();
+
+    ctx.fillStyle = bgColor;
+    for (let x = margin; x < canvas.width; x = x + (margin * 2 + pxSize)) {
+      ctx.fillRect(x, margin, pxSize, pxSize);
+      for (let y = margin * 3 + pxSize; y < canvas.height; y = y + (margin * 2 + pxSize)) {
+        ctx.fillRect(x, y, pxSize, pxSize);
+      }
     }
   };
 
+  appendCanvas = () => {
+    const canvas = document.getElementById('canvas');
+
+    this.drawCanvas();
+
+    const getSquare = (x, y) => {
+      const row = ~~(y / (this.state.pixelSize + this.state.pixelSpace * 2));
+      const column = ~~(x / (this.state.pixelSize + this.state.pixelSpace * 2));
+      const pos = row * this.state.gridWidth + column;
+      return pos;
+    };
+
+    const draw = e => {
+      const fromTop = canvas.getBoundingClientRect().top;
+      const fromLeft = canvas.getBoundingClientRect().left;
+      const square = getSquare(e.clientX - fromLeft, e.clientY - fromTop);
+
+      this.paintBuc(square);
+
+      if (this.state.eraser) {
+        this.toDeath(square);
+      } else {
+        this.toLive(square);
+        this.imageColorPic(e);
+      }
+
+      this.symmetricalX(square);
+      this.symmetricalY(square);
+
+      if (this.state.symmetricalY && this.state.symmetricalX && !this.state.shiftPressed)
+        this.symmetricalX(this.symmetricalY(square));
+    };
+
+    const shiftDraw = e => {
+      const fromTop = canvas.getBoundingClientRect().top;
+      const fromLeft = canvas.getBoundingClientRect().left;
+      const square = getSquare(e.clientX - fromLeft, e.clientY - fromTop);
+      if (!dirElem) dirElem = square;
+      xPos = e.x;
+      yPos = e.y;
+      window.addEventListener('mousemove', this.shiftDraw);
+    };
+
+    canvas.addEventListener('mousedown', e => {
+      if (!this.state.isPlaying) {
+        draw(e);
+        if (this.state.shiftPressed && !this.state.paintBuc) {
+          shiftDraw(e);
+        } else canvas.addEventListener('mousemove', draw);
+      }
+    });
+    window.addEventListener('mouseup', () => {
+      canvas.removeEventListener('mousemove', draw);
+    });
+  };
+
+  drawSym = () => {
+    const [canvas, width, height, margin, pxSize, symColor] = [
+      document.getElementById('canvas'),
+      this.state.gridWidth,
+      this.state.gridHeight,
+      this.state.pixelSpace,
+      this.state.pixelSize,
+      this.state.SymmetryLinesColor,
+    ];
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = symColor;
+    width % 2 !== 0
+      ? ctx.fillRect(canvas.width / 2 - (margin * 2 + pxSize / 2), 0, margin * 4 + pxSize, canvas.height)
+      : ctx.fillRect(canvas.width / 2 - margin, 0, margin * 2, canvas.height);
+    height % 2 !== 0
+      ? ctx.fillRect(0, canvas.height / 2 - (margin * 2 + pxSize / 2), canvas.width, margin * 4 + pxSize)
+      : ctx.fillRect(0, canvas.height / 2 - margin, canvas.width, margin * 2);
+  };
+
+  toLive = (p, color) => {
+    const [canvas, pxSize] = [document.getElementById('canvas'), this.state.pixelSize];
+    const ctx = canvas.getContext('2d');
+    const pos = this.getPos(p);
+    ctx.fillStyle = color
+      ? color
+      : this.state.isRandomColor
+      ? `hsla(${Math.random() * 360}, 100%, 40%, 1)`
+      : this.state.pixleColor;
+    ctx.fillRect(pos.x, pos.y, pxSize, pxSize);
+  };
+
+  toDeath = p => {
+    const [canvas, pxSize] = [document.getElementById('canvas'), this.state.pixelSize];
+    const ctx = canvas.getContext('2d');
+    const pos = this.getPos(p);
+    ctx.fillStyle = this.state.backgroundPixleColor;
+    ctx.fillRect(pos.x, pos.y, pxSize, pxSize);
+  };
+
+  getPos = p => {
+    const [width, margin, pxSize] = [this.state.gridWidth, this.state.pixelSpace, this.state.pixelSize];
+    const findRow = ~~(p / width);
+    const findColumn = p - findRow * width;
+    const x = findColumn * (pxSize + margin * 2) + margin;
+    const y = findRow * (pxSize + margin * 2) + margin;
+    return { x: x, y: y };
+  };
+
+  changePixelColor = newColor => {
+    const canvas = document.getElementById('canvas');
+    const [margin, pxSize, bgColor] = [this.state.pixelSpace, this.state.pixelSize, this.state.backgroundPixleColor];
+
+    const ctx = canvas.getContext('2d');
+
+    const checkLive = (x, y) => {
+      const data = ctx.getImageData(x + pxSize / 2, y + pxSize / 2, 1, 1).data;
+      const isLive = this.RGBToHex(data[0], data[1], data[2]) !== bgColor;
+      return isLive;
+    };
+
+    ctx.fillStyle = newColor;
+    for (let x = margin; x < canvas.width; x = x + (margin * 2 + pxSize)) {
+      if (!checkLive(x, margin)) ctx.fillRect(x, margin, pxSize, pxSize);
+      for (let y = margin * 3 + pxSize; y < canvas.height; y = y + (margin * 2 + pxSize)) {
+        if (!checkLive(x, y)) ctx.fillRect(x, y, pxSize, pxSize);
+      }
+    }
+    this.setState({ backgroundPixleColor: newColor });
+    localStorage.setItem('backgroundPixleColor', newColor);
+  };
+
+  changePixelSize = newSize => {
+    const live = this.getLivePixels();
+    this.setState({ pixelSize: Number(newSize) }, () => {
+      this.drawCanvas();
+      live[0].forEach((e, i) => {
+        this.toLive(e, live[1][i]);
+      });
+      localStorage.setItem('pixelSize', Number(newSize));
+    });
+  };
+
+  changeGridWidth = newWidth => {
+    const live = this.getLivePixels();
+    const pWidth = this.state.gridWidth;
+    this.setState({ gridWidth: newWidth }, () => {
+      this.drawCanvas();
+      this.applyPattren(live[0], live[1], pWidth);
+      this.readDrawing();
+      localStorage.setItem('gridWidth', newWidth);
+    });
+  };
+
+  changeGridHeight = newHeight => {
+    const live = this.getLivePixels();
+    this.setState({ gridHeight: newHeight }, () => {
+      this.drawCanvas();
+      live[0].forEach((e, i) => {
+        this.toLive(e, live[1][i]);
+      });
+      this.readDrawing();
+      localStorage.setItem('gridHeight', newHeight);
+    });
+  };
+
+  changeLinesSize = newSize => {
+    const live = this.getLivePixels();
+    this.setState({ pixelSpace: Number(newSize / 2) }, () => {
+      this.drawCanvas();
+      live[0].forEach((e, i) => {
+        this.toLive(e, live[1][i]);
+      });
+      localStorage.setItem('pixelSpace', Number(newSize / 2));
+    });
+  };
+
+  getLivePixels = () => {
+    const [canvas, width, height, margin, bgColor, pxSize] = [
+      document.getElementById('canvas'),
+      this.state.gridWidth,
+      this.state.gridHeight,
+      this.state.pixelSpace,
+      this.state.backgroundPixleColor,
+      this.state.pixelSize,
+    ];
+
+    const ctx = canvas.getContext('2d');
+
+    const checkLive = (x, y) => {
+      const data = ctx.getImageData(x + pxSize / 2, y + pxSize / 2, 1, 1).data;
+      const color = this.RGBToHex(data[0], data[1], data[2]);
+      const isLive = color !== bgColor;
+      return { is: isLive, color: color };
+    };
+
+    const getPos = p => {
+      const findRow = ~~(p / width);
+      const findColumn = p - findRow * width;
+      const x = findColumn * (pxSize + margin * 2) + margin;
+      const y = findRow * (pxSize + margin * 2) + margin;
+      return { x: x, y: y };
+    };
+
+    let lives = [[], []];
+    for (let i = 0; i < width * height; i++) {
+      const p = getPos(i);
+      const check = checkLive(p.x, p.y);
+      if (check.is) {
+        lives[0].push(i);
+        lives[1].push(check.color);
+      }
+    }
+    return lives;
+  };
+
+  checkLive = (x, y) => {
+    const [canvas, bgColor, pxSize] = [document.getElementById('canvas'), this.state.backgroundPixleColor, this.state.pixelSize];
+    const ctx = canvas.getContext('2d');
+    const data = ctx.getImageData(x + pxSize / 2, y + pxSize / 2, 1, 1).data;
+    const color = this.RGBToHex(data[0], data[1], data[2]);
+    const isLive = color !== bgColor;
+    return { is: isLive, color: color };
+  };
+
   checkliveOrDead = i => {
-    const pixels = document.getElementsByClassName('lifeDeathPixels');
     let livePixels = 0;
+    const checkLive = p => {
+      const [canvas, width, margin, bgColor, pxSize] = [
+        document.getElementById('canvas'),
+        this.state.gridWidth,
+        this.state.pixelSpace,
+        this.state.backgroundPixleColor,
+        this.state.pixelSize,
+      ];
+      const findRow = ~~(p / width);
+      const findColumn = p - findRow * width;
+      const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
+      const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
+
+      const red = y * (canvas.width * 4) + x * 4;
+      const color = this.RGBToHex(canvasData[red], canvasData[red + 1], canvasData[red + 2]);
+      const isLive = color !== bgColor;
+      return isLive;
+    };
+
     const width = this.state.gridWidth;
-    const isLive = pixels[i].dataset.live === 'true';
+    const height = this.state.gridHeight;
+    const isLive = checkLive(i);
     const firstPixle = Number.isInteger(i / width);
     const lastPixle = Number.isInteger((i + 1) / width);
+
     const checkNeighbours = n => {
-      if (pixels[n]?.dataset.live === 'true') livePixels++;
+      if (n >= 0 && n < width * height) if (checkLive(n)) livePixels++;
     };
 
     if (!lastPixle) checkNeighbours(i + 1);
@@ -343,33 +510,13 @@ export default class GameOfLife extends Component {
     }
   };
 
-  toLive = e => {
-    if (e) {
-      this.state.isRandomColor
-        ? (e.style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 40%, 1)`)
-        : (e.style.backgroundColor = this.state.pixleColor);
-      e.dataset.live = 'true';
-    }
-  };
-
-  toDeath = e => {
-    if (e) {
-      if (e.dataset.live === 'true') {
-        e.style.backgroundColor = this.state.backgroundPixleColor;
-        e.removeAttribute('data-live');
-      }
-    }
-  };
-
   play = () => {
     if (!this.state.isPlaying) {
       this.setState({ isPlaying: true });
-      const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
       if (!this.state.isPaused) {
-        const getDraw = [];
-        const getColors = [];
-        pixels.forEach(e => getDraw.push(Number(e.dataset.pos)));
-        pixels.forEach(e => getColors.push(window.getComputedStyle(e).backgroundColor));
+        const lives = this.getLivePixels();
+        const getDraw = lives[0];
+        const getColors = lives[1];
         lastPaint = getDraw;
         lastPaintColors = getColors;
         lastPaintGrid = [this.state.gridWidth, this.state.gridHeight];
@@ -377,39 +524,32 @@ export default class GameOfLife extends Component {
         localStorage.setItem('lastPaintColors', JSON.stringify(getColors));
         localStorage.setItem('lastPaintGrid', JSON.stringify(lastPaintGrid));
       }
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
       interval = setInterval(() => {
+        canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         this.renderLifeDeath();
       }, this.state.speed);
     } else this.pauseRender();
   };
 
-  renderLifeDeath = () => {
-    const pixels = document.getElementsByClassName('lifeDeathPixels');
+  renderLifeDeath = record => {
     const toLive = [];
     const toDeath = [];
-    for (let i = 0; i < pixels.length; i++) {
+    if (record) {
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    }
+    for (let i = 0; i < this.state.gridWidth * this.state.gridHeight; i++) {
       this.checkliveOrDead(i) ? toLive.push(i) : toDeath.push(i);
-      if (i === pixels.length - 1) {
+      if (i === this.state.gridWidth * this.state.gridHeight - 1) {
         toLive.forEach(e => {
-          this.state.isRandomColor
-            ? (pixels[e].style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 40%, 1)`)
-            : (pixels[e].style.backgroundColor = this.state.pixleColor);
-          pixels[e].dataset.live = 'true';
+          this.state.isRandomColor ? this.toLive(e, `hsla(${Math.random() * 360}, 100%, 40%, 1)`) : this.toLive(e);
         });
-        toDeath.forEach(e => {
-          pixels[e].style.backgroundColor = this.state.backgroundPixleColor;
-          pixels[e].removeAttribute('data-live');
-        });
+        toDeath.forEach(e => this.toDeath(e));
       }
     }
-  };
-
-  resetRender = () => {
-    if (!this.state.isPlaying) this.readDrawing();
-    clearInterval(interval);
-    const pixels = document.querySelectorAll('.lifeDeathPixels[data-live=true]');
-    pixels.forEach(e => this.toDeath(e));
-    this.setState({ isPlaying: false, isPaused: false });
   };
 
   pauseRender = () => {
@@ -501,17 +641,15 @@ export default class GameOfLife extends Component {
 
   copyToClipBoard = () => {
     this.pauseRender();
-    this.toCanvas().then(canvas => {
-      console.log(canvas);
-      canvas.toBlob(e => {
-        navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
-          if (result.state === 'granted' || result.state === 'prompt') {
-            // eslint-disable-next-line no-undef
-            navigator.clipboard.write([new ClipboardItem({ 'image/png': e })]);
-          }
-        });
-      }, 'image/png');
-    });
+    const canvas = document.getElementById('canvas');
+    canvas.toBlob(e => {
+      navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
+        if (result.state === 'granted' || result.state === 'prompt') {
+          // eslint-disable-next-line no-undef
+          navigator.clipboard.write([new ClipboardItem({ 'image/png': e })]);
+        }
+      });
+    }, 'image/png');
   };
 
   toggleWindowHandle = el => {
@@ -581,11 +719,12 @@ export default class GameOfLife extends Component {
   saveDrawing = () => {
     this.pauseRender();
     const buttons = document.querySelectorAll('#saveCancleContainer button');
-    const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
+    const canvas = document.getElementById('canvas');
+    const lives = this.getLivePixels();
     buttons.forEach(e => (e.disabled = true));
     const newSave = {
-      livePixels: [],
-      pixelsColors: [],
+      livePixels: lives[0],
+      pixelsColors: lives[1],
       savingName: document.getElementById('saveName').value,
       drawngImg: '',
       saveSettings: [
@@ -596,21 +735,17 @@ export default class GameOfLife extends Component {
         this.state.backgroundPixleColor,
       ],
     };
-    pixels.forEach(e => newSave.livePixels.push(Number(e.dataset.pos)));
-    pixels.forEach(e => newSave.pixelsColors.push(window.getComputedStyle(e).backgroundColor));
-    this.toCanvas().then(canvas => {
-      const dataURL = canvas.toDataURL('image/png');
-      newSave.drawngImg = dataURL;
-      if (localStorage.getItem('saved')) {
-        const saved = JSON.parse(localStorage.getItem('saved'));
-        saved.push(newSave);
-        localStorage.setItem('saved', JSON.stringify(saved));
-      } else {
-        localStorage.setItem('saved', JSON.stringify([newSave]));
-      }
-      buttons.forEach(e => (e.disabled = false));
-      this.toggleSaveWindow();
-    });
+    const dataURL = canvas.toDataURL('image/png');
+    newSave.drawngImg = dataURL;
+    if (localStorage.getItem('saved')) {
+      const saved = JSON.parse(localStorage.getItem('saved'));
+      saved.push(newSave);
+      localStorage.setItem('saved', JSON.stringify(saved));
+    } else {
+      localStorage.setItem('saved', JSON.stringify([newSave]));
+    }
+    buttons.forEach(e => (e.disabled = false));
+    this.toggleSaveWindow();
   };
 
   renderLoadCards = () =>
@@ -630,7 +765,6 @@ export default class GameOfLife extends Component {
 
   loadSaves = i => {
     this.pauseRender();
-    let pixels = document.querySelectorAll('.lifeDeathPixels');
     const saved = JSON.parse(localStorage.getItem('saved'));
     this.setState(
       {
@@ -646,13 +780,7 @@ export default class GameOfLife extends Component {
         localStorage.setItem('pixelSize', saved[i].saveSettings[2]);
         localStorage.setItem('pixelSpace', saved[i].saveSettings[3]);
         localStorage.setItem('backgroundPixleColor', saved[i].saveSettings[4]);
-        pixels.forEach(el => el.remove());
-        this.appendDivs(saved[i].saveSettings[0], saved[i].saveSettings[1]);
-        pixels = document.querySelectorAll('.lifeDeathPixels');
-        saved[i].livePixels.forEach((e, ind) => {
-          pixels[e].style.backgroundColor = saved[i].pixelsColors[ind];
-          pixels[e].dataset.live = 'true';
-        });
+        this.applyPattren(saved[i].livePixels, saved[i].pixelsColors, saved[i].saveSettings[0]);
         this.toggleLoadWindow();
         undo = [];
         redo = [];
@@ -695,66 +823,56 @@ export default class GameOfLife extends Component {
   };
 
   paintBuc = i => {
-    const pixels = document.querySelectorAll('.lifeDeathPixels');
-    const correntColor = window.getComputedStyle(pixels[i]).backgroundColor;
-    const hexToRGB = c => `rgb(${colorToArr(c)[0]}, ${colorToArr(c)[1]}, ${colorToArr(c)[2]})`;
-    const sameColor = correntColor !== hexToRGB(this.state.pixleColor);
-    const width = this.state.gridWidth;
-    const height = this.state.gridHeight;
-    const isEmpty = d => {
-      if (
-        pixels[d] &&
-        this.state.eraser &&
-        pixels[d].dataset.live === 'true' &&
-        window.getComputedStyle(pixels[d]).backgroundColor === correntColor
-      ) {
-        return true;
-      } else if (
-        pixels[d] &&
-        !this.state.eraser &&
-        window.getComputedStyle(pixels[d]).backgroundColor === correntColor &&
-        sameColor
-      ) {
-        return true;
-      } else return false;
-    };
+    if (this.state.paintBuc) {
+      const pos = this.getPos(i);
+      const checkColor = this.checkLive(pos.x, pos.y);
+      const correntColor = checkColor.color;
+      const sameColor = correntColor !== this.state.pixleColor;
+      const width = this.state.gridWidth;
+      const height = this.state.gridHeight;
+      const isEmpty = d => {
+        const p = this.getPos(d);
+        const check = this.checkLive(p.x, p.y);
+        if (this.state.eraser && check.is && check.color === correntColor) {
+          return true;
+        } else if (!this.state.eraser && check.color === correntColor && sameColor) {
+          return true;
+        } else return false;
+      };
 
-    const toDraw = x => {
-      if (this.state.eraser) {
-        pixels[x].style.backgroundColor = this.state.backgroundPixleColor;
-        pixels[x].removeAttribute('data-live');
-      } else {
-        pixels[x].style.backgroundColor = this.state.isRandomColor
-          ? `hsla(${Math.random() * 360}, 100%, 40%, 1)`
-          : this.state.pixleColor;
-        pixels[x].dataset.live = 'true';
-      }
-    };
+      const toDraw = x => {
+        if (this.state.eraser) {
+          this.toDeath(x);
+        } else {
+          this.toLive(x);
+        }
+      };
 
-    const checkAround = x => {
-      const next = x + 1;
-      const previous = x - 1;
-      const up = x - width;
-      const down = x + width;
-      if (isEmpty(next) && !Number.isInteger((i + 1) / width)) {
-        toDraw(next);
-        checkAround(next);
-      }
-      if (isEmpty(previous) && !Number.isInteger(i / width)) {
-        toDraw(previous);
-        checkAround(previous);
-      }
-      if (isEmpty(up) && ~~(i / width) !== 0) {
-        toDraw(up);
-        checkAround(up);
-      }
-      if (isEmpty(down) && ~~(i / this.state.gridWidth) !== height) {
-        toDraw(down);
-        checkAround(down);
-      }
-    };
-    toDraw(i);
-    checkAround(i);
+      const checkAround = x => {
+        const next = x + 1;
+        const previous = x - 1;
+        const up = x - width;
+        const down = x + width;
+        if (isEmpty(next) && !Number.isInteger((i + 1) / width)) {
+          toDraw(next);
+          checkAround(next);
+        }
+        if (isEmpty(previous) && !Number.isInteger(i / width)) {
+          toDraw(previous);
+          checkAround(previous);
+        }
+        if (isEmpty(up) && ~~(i / width) !== 0) {
+          toDraw(up);
+          checkAround(up);
+        }
+        if (isEmpty(down) && ~~(i / this.state.gridWidth) !== height) {
+          toDraw(down);
+          checkAround(down);
+        }
+      };
+      toDraw(i);
+      checkAround(i);
+    }
   };
 
   exportData = () => {
@@ -790,31 +908,30 @@ export default class GameOfLife extends Component {
   };
 
   shiftDraw = e => {
-    const pixels = document.querySelectorAll('.lifeDeathPixels');
     const perSquare = this.state.pixelSize + this.state.pixelSpace * 2;
     if (e.movementX < 0 && drawDir === 'x' && xDif !== ~~((xPos - e.x) / perSquare)) {
-      this.state.eraser ? this.toDeath(pixels[dirElem]) : this.toLive(pixels[dirElem]);
+      this.state.eraser ? this.toDeath(dirElem) : this.toLive(dirElem);
       this.symmetricalX(dirElem);
       this.symmetricalY(dirElem);
       if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(dirElem));
       xDif = ~~((xPos - e.x) / perSquare);
       dirElem = dirElem - 1;
     } else if (e.movementX > 0 && drawDir === 'x' && xDif !== ~~((e.x - xPos) / perSquare)) {
-      this.state.eraser ? this.toDeath(pixels[dirElem]) : this.toLive(pixels[dirElem]);
+      this.state.eraser ? this.toDeath(dirElem) : this.toLive(dirElem);
       this.symmetricalX(dirElem);
       this.symmetricalY(dirElem);
       if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(dirElem));
       xDif = ~~((e.x - xPos) / perSquare);
       dirElem = dirElem + 1;
     } else if (e.movementY < 0 && drawDir === 'y' && yDif !== ~~((yPos - e.y) / perSquare)) {
-      this.state.eraser ? this.toDeath(pixels[dirElem]) : this.toLive(pixels[dirElem]);
+      this.state.eraser ? this.toDeath(dirElem) : this.toLive(dirElem);
       this.symmetricalX(dirElem);
       this.symmetricalY(dirElem);
       if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(dirElem));
       yDif = ~~((yPos - e.y) / perSquare);
       dirElem = dirElem - this.state.gridWidth;
     } else if (e.movementY > 0 && drawDir === 'y' && yDif !== ~~((e.y - yPos) / perSquare)) {
-      this.state.eraser ? this.toDeath(pixels[dirElem]) : this.toLive(pixels[dirElem]);
+      this.state.eraser ? this.toDeath(dirElem) : this.toLive(dirElem);
       this.symmetricalX(dirElem);
       this.symmetricalY(dirElem);
       if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(dirElem));
@@ -831,115 +948,54 @@ export default class GameOfLife extends Component {
 
   moveGrid = dir => {
     this.readDrawing();
-    const pixels = document.querySelectorAll('.lifeDeathPixels');
     const width = this.state.gridWidth;
-    const height = this.state.gridHeight;
-    let row = [];
-    let colors = [];
+    const lives = this.getLivePixels();
+    let row = lives[0];
+    let colors = lives[1];
 
-    for (let i = 0; i < width * height; i++) {
-      if (pixels[i].dataset.live === 'true') {
-        row.push(i);
-        colors.push(window.getComputedStyle(pixels[i]).backgroundColor);
-        this.toDeath(pixels[i]);
-      }
-    }
-
+    this.drawCanvas();
     if (dir === 'up') {
-      row.forEach((e, x) => {
-        if (pixels[e - width]) {
-          pixels[e - width].style.backgroundColor = colors[x];
-          pixels[e - width].dataset.live = 'true';
-        }
-      });
+      row.forEach((e, x) => this.toLive(e - width, colors[x]));
     } else if (dir === 'down') {
-      row.forEach((e, x) => {
-        if (pixels[e + width]) {
-          pixels[e + width].style.backgroundColor = colors[x];
-          pixels[e + width].dataset.live = 'true';
-        }
-      });
+      row.forEach((e, x) => this.toLive(e + width, colors[x]));
     } else if (dir === 'left') {
-      row.forEach((e, x) => {
-        if (pixels[e - 1]) {
-          pixels[e - 1].style.backgroundColor = colors[x];
-          pixels[e - 1].dataset.live = 'true';
-        }
-      });
+      row.forEach((e, x) => this.toLive(e - 1, colors[x]));
     } else if (dir === 'right') {
-      row.forEach((e, x) => {
-        if (pixels[e + 1]) {
-          pixels[e + 1].style.backgroundColor = colors[x];
-          pixels[e + 1].dataset.live = 'true';
-        }
-      });
+      row.forEach((e, x) => this.toLive(e + 1, colors[x]));
     }
-  };
-
-  setStateAsync = state => new Promise(resolve => this.setState(state, resolve));
-
-  changeGridWidth = async (newWidth, dontApplay) => {
-    const pixels = document.querySelectorAll('.lifeDeathPixels');
-    const width = this.state.gridWidth;
-    const height = this.state.gridHeight;
-    const live = [];
-    const colors = [];
-    await this.setStateAsync({ gridWidth: newWidth });
-    pixels.forEach((e, i) => {
-      if (e.dataset.live === 'true') {
-        live.push(i);
-        colors.push(window.getComputedStyle(e).backgroundColor);
-      }
-    });
-    if (newWidth < width) {
-      for (let i = width * height - 1; i > newWidth * height - 1; i--) {
-        pixels[i].remove();
-      }
-      if (!dontApplay) this.applyPattren(live, colors, width);
-    } else {
-      this.appendDivs(newWidth, height, width * height);
-      if (!dontApplay) this.applyPattren(live, colors, width);
-    }
-    localStorage.setItem('gridWidth', newWidth);
-  };
-
-  changeGridHeight = async newHeight => {
-    const pixels = document.querySelectorAll('.lifeDeathPixels');
-    const width = this.state.gridWidth;
-    const height = this.state.gridHeight;
-    await this.setStateAsync({ gridHeight: newHeight });
-    if (newHeight < height) {
-      for (let i = newHeight * width; i < width * height; i++) {
-        pixels[i].remove();
-      }
-    } else {
-      this.appendDivs(width, newHeight, width * height);
-    }
-    localStorage.setItem('gridHeight', newHeight);
   };
 
   autoFill = () => {
-    const pixels = document.querySelectorAll('.lifeDeathPixels');
     const img = document.getElementById('img');
-    const canvas = document.getElementById('can');
+    const can = document.getElementById('can');
+    const canvas = document.getElementById('canvas');
     const fromLeft = img.getBoundingClientRect().left;
     const fromTop = img.getBoundingClientRect().top;
+    const [margin, pxSize] = [this.state.pixelSpace, this.state.pixelSize];
 
-    canvas.width = img.width;
-    canvas.height = img.height;
-    canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+    can.width = img.width;
+    can.height = img.height;
+    can.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
 
-    pixels.forEach(e => {
-      const x = e.getBoundingClientRect().left + this.state.pixelSize / 2 - fromLeft;
-      const y = e.getBoundingClientRect().top + this.state.pixelSize / 2 - fromTop;
+    const ctx = canvas.getContext('2d');
 
-      if (x <= canvas.width && x >= 0 && y <= canvas.height && y >= 0) {
-        const p = canvas.getContext('2d').getImageData(x, y, 1, 1).data;
+    const copy = (x, y) => {
+      const nx = x + canvas.getBoundingClientRect().left + pxSize / 2 - fromLeft;
+      const ny = y + canvas.getBoundingClientRect().top + pxSize / 2 - fromTop;
+      if (nx <= can.width && nx >= 0 && ny <= can.height && ny >= 0) {
+        const p = can.getContext('2d').getImageData(nx, ny, 1, 1).data;
         const color = this.RGBToHex(p[0], p[1], p[2]);
-        e.style.backgroundColor = color;
-        e.dataset.live = 'true';
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, pxSize, pxSize);
       }
-    });
+    };
+    for (let x = margin; x < canvas.width; x = x + (margin * 2 + pxSize)) {
+      copy(x, margin);
+      for (let y = margin * 3 + pxSize; y < canvas.height; y = y + (margin * 2 + pxSize)) {
+        copy(x, y);
+      }
+    }
+
     this.readDrawing();
   };
 
@@ -979,148 +1035,22 @@ export default class GameOfLife extends Component {
     return '#' + r + g + b;
   };
 
-  toCanvas = async transparent => {
-    const canvas = document.getElementById('can');
-    const pSize = this.state.pixelSize;
-    const margin = this.state.pixelSpace;
-    const pColor = this.state.backgroundPixleColor;
-    const strokeColor = this.state.betweenPixleColor;
-    const pixels = document.querySelectorAll('.lifeDeathPixels[data-live="true"]');
-
-    let reg = [[], []];
-    pixels.forEach(e => {
-      reg[0].push(Number(e.dataset.pos));
-      reg[1].push(window.getComputedStyle(e).backgroundColor);
-    });
-
-    canvas.width = this.state.gridWidth * (margin * 2 + pSize);
-    canvas.height = this.state.gridHeight * (margin * 2 + pSize);
-
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = strokeColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = pColor;
-    let raw = 0;
-    let pos = 0;
-    for (let x = margin; x < canvas.width; x = x + (margin * 2 + pSize)) {
-      if (reg[0].includes(pos)) {
-        const ind = reg[0].indexOf(pos);
-        ctx.fillStyle = reg[1][ind];
-        ctx.fillRect(x, margin, pSize, pSize);
-      } else {
-        ctx.fillStyle = pColor;
-        ctx.fillRect(x, margin, pSize, pSize);
-        if (transparent) ctx.clearRect(x, margin, pSize, pSize);
-      }
-      raw = raw + 1;
-
-      for (let y = margin * 3 + pSize; y < canvas.height; y = y + (margin * 2 + pSize)) {
-        pos = pos + this.state.gridWidth;
-        if (reg[0].includes(pos)) {
-          const ind = reg[0].indexOf(pos);
-          ctx.fillStyle = reg[1][ind];
-          ctx.fillRect(x, y, pSize, pSize);
-        } else {
-          ctx.fillStyle = pColor;
-          ctx.fillRect(x, y, pSize, pSize);
-          if (transparent) ctx.clearRect(x, y, pSize, pSize);
-        }
-      }
-      pos = raw;
-    }
-    return canvas;
-  };
-
-  testCanvas = () => {
-    const canvas = document.getElementById('can');
-    const [width, height, margin, pxSize, marginColor, bgColor, pxColor, symColor] = [
-      this.state.gridWidth,
-      this.state.gridHeight,
-      this.state.pixelSpace,
-      this.state.pixelSize,
-      this.state.betweenPixleColor,
-      this.state.backgroundPixleColor,
-      this.state.pixleColor,
-      this.state.SymmetryLinesColor,
-    ];
-
-    canvas.width = width * (margin * 2 + pxSize);
-    canvas.height = height * (margin * 2 + pxSize);
-    const ctx = canvas.getContext('2d', { alpha: false });
-    if (margin !== 0) ctx.translate(0.5, 0.5);
-
-    ctx.fillStyle = marginColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = symColor;
-    width % 2 !== 0
-      ? ctx.fillRect(canvas.width / 2 - (margin * 2 + pxSize / 2), 0, margin * 4 + pxSize, canvas.height)
-      : ctx.fillRect(canvas.width / 2 - margin, 0, margin * 2, canvas.height);
-    height % 2 !== 0
-      ? ctx.fillRect(0, canvas.height / 2 - (margin * 2 + pxSize / 2), canvas.width, margin * 4 + pxSize)
-      : ctx.fillRect(0, canvas.height / 2 - margin, canvas.width, margin * 2);
-
-    ctx.fillStyle = bgColor;
-    for (let x = margin; x < canvas.width; x = x + (margin * 2 + pxSize)) {
-      ctx.fillRect(x, margin, pxSize, pxSize);
-      for (let y = margin * 3 + pxSize; y < canvas.height; y = y + (margin * 2 + pxSize)) {
-        ctx.fillRect(x, y, pxSize, pxSize);
-      }
-    }
-
-    canvas.addEventListener('mousemove', e => {
-      const top = canvas.getBoundingClientRect().top;
-      const p = getPos(getSquare(e.clientX, e.clientY - top));
-      ctx.fillStyle = pxColor;
-      ctx.fillRect(p.x, p.y, pxSize, pxSize);
-    });
-
-    const getPos = p => {
-      const findRow = ~~(p / width);
-      const findColumn = p - findRow * width;
-      const x = findColumn * (pxSize + margin * 2) + margin;
-      const y = findRow * (pxSize + margin * 2) + margin;
-      return { x: x, y: y };
-    };
-
-    const getSquare = (x, y) => {
-      const row = ~~(y / (pxSize + margin * 2));
-      const column = ~~(x / (pxSize + margin * 2));
-      const pos = row * width + column;
-      return pos;
-    };
-
-    const checkLive = (x, y) => {
-      const data = ctx.getImageData(x + pxSize / 2, y + pxSize / 2, 1, 1).data;
-      const isLive = this.RGBToHex(data[0], data[1], data[2]) === pxColor;
-      return isLive;
-    };
-
-    const getLive = () => {
-      let lives = [];
-      for (let i = 0; i < width * height; i++) {
-        const p = getPos(i);
-        if (checkLive(p.x, p.y)) lives.push(i);
-      }
-      return lives;
-    };
-    const toLive = (p, color) => {
-      const pos = getPos(p);
-      ctx.fillStyle = color ? color : pxColor;
+  getTransparentCanvas = () => {
+    const [canvas, can, pxSize] = [document.getElementById('canvas'), document.getElementById('can'), this.state.pixelSize];
+    const lives = this.getLivePixels();
+    can.width = canvas.width;
+    can.height = canvas.height;
+    const ctx = can.getContext('2d');
+    lives[0].forEach((e, i) => {
+      const pos = this.getPos(e);
+      ctx.fillStyle = lives[1][i];
       ctx.fillRect(pos.x, pos.y, pxSize, pxSize);
-    };
-    window.addEventListener('keydown', () => {
-      undo[undo.length - 1][0].forEach((e, i) => {
-        toLive(e, undo[undo.length - 1][1][i]);
-      });
     });
   };
 
   render() {
     return (
       <>
-        <button onClick={this.testCanvas}>test</button>
         <div id='controlPanel' className='controlPanel'>
           <div
             id='grabPad'
@@ -1182,7 +1112,7 @@ export default class GameOfLife extends Component {
             </svg>
           </button>
 
-          <button className='buttons' onClick={this.resetRender} title='Reset'>
+          <button className='buttons' onClick={this.drawCanvas} title='Reset'>
             <svg
               xmlns='http://www.w3.org/2000/svg'
               enableBackground='new 0 0 24 24'
@@ -1392,11 +1322,7 @@ export default class GameOfLife extends Component {
             max='120'
             value={this.state.gridWidth}
             disabled={this.state.isPlaying}
-            onChange={async e => {
-              const value = Number(e.target.value) > 120 ? 120 : Number(e.target.value) < 5 ? 5 : Number(e.target.value);
-              await this.changeGridWidth(value);
-              this.readDrawing();
-            }}
+            onChange={e => this.changeGridWidth(Number(e.target.value))}
           ></input>
           <p className='controlLabel'>Per Row</p>
           <input
@@ -1407,11 +1333,7 @@ export default class GameOfLife extends Component {
             max='120'
             value={this.state.gridHeight}
             disabled={this.state.isPlaying}
-            onChange={async e => {
-              const value = Number(e.target.value) > 120 ? 120 : Number(e.target.value) < 5 ? 5 : Number(e.target.value);
-              await this.changeGridHeight(value);
-              this.readDrawing();
-            }}
+            onChange={e => this.changeGridHeight(Number(e.target.value))}
           ></input>
           <p className='controlLabel'>Per Column</p>
 
@@ -1423,13 +1345,13 @@ export default class GameOfLife extends Component {
             max='50'
             value={this.state.pixelSize}
             onChange={e => {
-              this.setState({ pixelSize: Number(e.target.value) });
-              const pixels = document.querySelectorAll('.lifeDeathPixels');
-              pixels.forEach(el => {
-                el.style.width = e.target.value + 'px';
-                el.style.height = e.target.value + 'px';
-              });
-              localStorage.setItem('pixelSize', Number(e.target.value));
+              this.changePixelSize(e.target.value);
+
+              // const pixels = document.querySelectorAll('.lifeDeathPixels');
+              // pixels.forEach(el => {
+              //   el.style.width = e.target.value + 'px';
+              //   el.style.height = e.target.value + 'px';
+              // });
             }}
           ></input>
           <p className='controlLabel'>Square Size</p>
@@ -1443,12 +1365,13 @@ export default class GameOfLife extends Component {
             step='0.5'
             value={this.state.pixelSpace * 2}
             onChange={e => {
-              this.setState({ pixelSpace: Number(e.target.value / 2) });
-              const pixels = document.querySelectorAll('.lifeDeathPixels');
-              pixels.forEach(el => {
-                el.style.margin = Number(e.target.value / 2) + 'px';
-              });
-              localStorage.setItem('pixelSpace', Number(e.target.value / 2));
+              this.changeLinesSize(e.target.value);
+              // this.setState({ pixelSpace: Number(e.target.value / 2) });
+              // const pixels = document.querySelectorAll('.lifeDeathPixels');
+              // pixels.forEach(el => {
+              //   el.style.margin = Number(e.target.value / 2) + 'px';
+              // });
+              // localStorage.setItem('pixelSpace', Number(e.target.value / 2));
             }}
           ></input>
           <p className='controlLabel'>Grid Lines</p>
@@ -1511,10 +1434,10 @@ export default class GameOfLife extends Component {
             title='Backgorund Pixel Color'
             value={this.state.backgroundPixleColor}
             onChange={e => {
-              this.setState({ backgroundPixleColor: e.target.value });
-              const pixels = document.querySelectorAll('#lifeDeathContainer > div:not([data-live=true])');
-              pixels.forEach(el => (el.style.backgroundColor = e.target.value));
-              localStorage.setItem('backgroundPixleColor', e.target.value);
+              this.changePixelColor(e.target.value);
+
+              // const pixels = document.querySelectorAll('#lifeDeathContainer > div:not([data-live=true])');
+              // pixels.forEach(el => (el.style.backgroundColor = e.target.value));
             }}
           ></input>
           <p className='controlLabel'>Background</p>
@@ -1535,8 +1458,10 @@ export default class GameOfLife extends Component {
             title='Symmetry Lines Color'
             value={this.state.SymmetryLinesColor}
             onChange={e => {
-              this.setState({ SymmetryLinesColor: e.target.value });
-              localStorage.setItem('SymmetryLinesColor', e.target.value);
+              this.setState({ SymmetryLinesColor: e.target.value }, () => {
+                this.drawSym();
+                localStorage.setItem('SymmetryLinesColor', e.target.value);
+              });
             }}
           ></input>
           <p className='controlLabel'>Sym- Lines</p>
@@ -1748,7 +1673,7 @@ export default class GameOfLife extends Component {
           gridHeight={this.state.gridHeight}
           pixelSize={this.state.pixelSize}
           pixelSpace={this.state.pixelSpace}
-          toCanvas={this.toCanvas}
+          getTransparentCanvas={this.getTransparentCanvas}
         ></DownloadWindow>
 
         <div id='saveWindow'>
@@ -1906,6 +1831,8 @@ export default class GameOfLife extends Component {
               }
             }}
           >
+            <canvas id='canvas' style={{ backgroundColor: this.state.betweenPixleColor }}></canvas>
+
             <nav
               id='horizenLine'
               style={{
@@ -1938,7 +1865,7 @@ export default class GameOfLife extends Component {
         </div>
 
         <div id='blured'></div>
-        <canvas id='can' style={{ display: 'block' }}></canvas>
+        <canvas id='can' style={{ display: 'none' }}></canvas>
       </>
     );
   }

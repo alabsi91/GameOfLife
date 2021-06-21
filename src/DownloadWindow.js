@@ -44,13 +44,14 @@ export default class DownloadWindow extends Component {
   };
 
   captureImgs = async (frmaes, interval, delay, backwards) => {
+    const canvas = document.getElementById('canvas');
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
     const downloadAnimation = document.getElementById('downloadAnimation');
     const isMP4 = document.getElementById('downloadVideo').checked ? true : false;
     const imgs = [];
     for (let i = 1; i <= frmaes; i++) {
-      await this.props.toCanvas().then(canvas => imgs.push(canvas.toDataURL('image/png')));
-      this.props.renderLifeDeath();
+      imgs.push(canvas.toDataURL('image/png'));
+      this.props.renderLifeDeath(true);
     }
     if (delay) for (let i = 0; i < delay; i++) imgs.unshift(imgs[0]);
 
@@ -80,13 +81,20 @@ export default class DownloadWindow extends Component {
     );
   };
 
-  downloadImg = transparent => {
+  downloadImg = async transparent => {
     this.props.pauseRender();
-    this.props.toCanvas(transparent).then(canvas => {
+    const canvas = document.getElementById('canvas');
+    const can = document.getElementById('can');
+    if (transparent) {
+      await this.props.getTransparentCanvas();
+      can.toBlob(e => {
+        saveAs(e, 'Game of life ' + Date.now());
+      }, 'image/png');
+    } else {
       canvas.toBlob(e => {
         saveAs(e, 'Game of life ' + Date.now());
       }, 'image/png');
-    });
+    }
   };
 
   downloadVideo = async gif => {
@@ -114,7 +122,7 @@ export default class DownloadWindow extends Component {
     saveAs(res, 'Game-of-life');
   };
 
-  downloadButtonHandle = () => {
+  downloadButtonHandle = async () => {
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
     const isPNG = document.getElementById('downloadPNG').checked ? true : false;
     const isBounce = document.getElementById('gifBounce').checked ? true : false;
@@ -123,7 +131,7 @@ export default class DownloadWindow extends Component {
     const delay = Number(document.getElementById('gifDelay').value);
     const transparent = document.getElementById('transparentPNG').checked ? true : false;
     if (isPNG) {
-      this.downloadImg(transparent);
+      await this.downloadImg(transparent);
       this.toggleDownloadWindow();
     } else {
       buttons.forEach(e => (e.disabled = true));

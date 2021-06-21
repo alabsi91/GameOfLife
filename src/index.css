@@ -4,6 +4,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+#canvas {
+  background-color: #ff0000;
+}
 #root {
   text-align: center;
 }
