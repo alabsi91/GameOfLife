@@ -46,6 +46,7 @@ export default class DownloadWindow extends Component {
   delay = ms => new Promise(res => setTimeout(res, ms));
 
   captureImgs = async (frmaes, interval, delay, backwards) => {
+    const start = Date.now();
     const canvas = document.getElementById('canvas');
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
     const downloadAnimation = document.getElementById('downloadAnimation');
@@ -57,7 +58,7 @@ export default class DownloadWindow extends Component {
     recordAnimation.style.display = 'block';
     framesCount.style.display = 'block';
     for (let i = 1; i <= frmaes; i++) {
-      framesCount.innerHTML = i
+      framesCount.innerHTML = i;
       imgs.push(canvas.toDataURL('image/png'));
       this.props.renderLifeDeath(true);
       await this.delay(2);
@@ -88,6 +89,7 @@ export default class DownloadWindow extends Component {
           buttons.forEach(e => (e.disabled = false));
           downloadAnimation.style.display = 'none';
           this.toggleDownloadWindow();
+          console.log((Date.now() - start) / 1000);
         } else console.error(obj.error);
       }
     );

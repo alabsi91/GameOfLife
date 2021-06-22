@@ -29,6 +29,7 @@ export default class GameOfLife extends Component {
       eraser: false,
       paintBuc: false,
       shiftPressed: false,
+      maintainColorPlay: false,
       loadCards: this.renderLoadCards(),
       speed: localStorage.getItem('speed') ? Number(localStorage.getItem('speed')) : 100,
       pixelSize: localStorage.getItem('pixelSize') ? Number(localStorage.getItem('pixelSize')) : 15,
@@ -363,50 +364,59 @@ export default class GameOfLife extends Component {
   };
 
   changePixelSize = newSize => {
-    const live = this.getLivePixels();
-    this.setState({ pixelSize: Number(newSize) }, () => {
-      this.drawCanvas();
-      live[0].forEach((e, i) => {
-        this.toLive(e, live[1][i]);
+    if (Number(newSize)) {
+      newSize = Number(newSize) < 1 ? 1 : Number(newSize);
+      const live = this.getLivePixels();
+      this.setState({ pixelSize: Number(newSize) }, () => {
+        this.drawCanvas();
+        live[0].forEach((e, i) => {
+          this.toLive(e, live[1][i]);
+        });
+        localStorage.setItem('pixelSize', Number(newSize));
       });
-      localStorage.setItem('pixelSize', Number(newSize));
-    });
+    }
   };
 
   changeGridWidth = newWidth => {
-    newWidth = Number(newWidth) > 1000 ? 1000 : Number(newWidth);
-    const live = this.getLivePixels();
-    const pWidth = this.state.gridWidth;
-    this.setState({ gridWidth: newWidth }, () => {
-      this.drawCanvas();
-      this.applyPattren(live[0], live[1], pWidth);
-      this.readDrawing();
-      localStorage.setItem('gridWidth', newWidth);
-    });
+    if (Number(newWidth)) {
+      newWidth = Number(newWidth) > 1000 ? 1000 : Number(newWidth) < 5 ? 5 : Number(newWidth);
+      const live = this.getLivePixels();
+      const pWidth = this.state.gridWidth;
+      this.setState({ gridWidth: newWidth }, () => {
+        this.drawCanvas();
+        this.applyPattren(live[0], live[1], pWidth);
+        this.readDrawing();
+        localStorage.setItem('gridWidth', newWidth);
+      });
+    }
   };
 
   changeGridHeight = newHeight => {
-    newHeight = Number(newHeight) > 1000 ? 1000 : Number(newHeight);
-    const live = this.getLivePixels();
-    this.setState({ gridHeight: newHeight }, () => {
-      this.drawCanvas();
-      live[0].forEach((e, i) => {
-        this.toLive(e, live[1][i]);
+    if (Number(newHeight)) {
+      newHeight = Number(newHeight) > 1000 ? 1000 : Number(newHeight) < 5 ? 5 : Number(newHeight);
+      const live = this.getLivePixels();
+      this.setState({ gridHeight: newHeight }, () => {
+        this.drawCanvas();
+        live[0].forEach((e, i) => {
+          this.toLive(e, live[1][i]);
+        });
+        this.readDrawing();
+        localStorage.setItem('gridHeight', newHeight);
       });
-      this.readDrawing();
-      localStorage.setItem('gridHeight', newHeight);
-    });
+    }
   };
 
   changeLinesSize = newSize => {
-    const live = this.getLivePixels();
-    this.setState({ pixelSpace: Number(newSize / 2) }, () => {
-      this.drawCanvas();
-      live[0].forEach((e, i) => {
-        this.toLive(e, live[1][i]);
+    if (Number(newSize) !== null) {
+      const live = this.getLivePixels();
+      this.setState({ pixelSpace: Number(newSize / 2) }, () => {
+        this.drawCanvas();
+        live[0].forEach((e, i) => {
+          this.toLive(e, live[1][i]);
+        });
+        localStorage.setItem('pixelSpace', Number(newSize / 2));
       });
-      localStorage.setItem('pixelSpace', Number(newSize / 2));
-    });
+    }
   };
 
   getLivePixels = () => {
@@ -420,26 +430,23 @@ export default class GameOfLife extends Component {
     ];
 
     const ctx = canvas.getContext('2d');
+    const ctxData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
-    const checkLive = (x, y) => {
-      const data = ctx.getImageData(x + pxSize / 2, y + pxSize / 2, 1, 1).data;
-      const color = this.RGBToHex(data[0], data[1], data[2]);
+    const checkLive = p => {
+      const findRow = ~~(p / width);
+      const findColumn = p - findRow * width;
+      const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
+      const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
+
+      const red = y * (canvas.width * 4) + x * 4;
+      const color = this.RGBToHex(ctxData[red], ctxData[red + 1], ctxData[red + 2]);
       const isLive = color !== bgColor;
       return { is: isLive, color: color };
     };
 
-    const getPos = p => {
-      const findRow = ~~(p / width);
-      const findColumn = p - findRow * width;
-      const x = findColumn * (pxSize + margin * 2) + margin;
-      const y = findRow * (pxSize + margin * 2) + margin;
-      return { x: x, y: y };
-    };
-
     let lives = [[], []];
     for (let i = 0; i < width * height; i++) {
-      const p = getPos(i);
-      const check = checkLive(p.x, p.y);
+      const check = checkLive(i);
       if (check.is) {
         lives[0].push(i);
         lives[1].push(check.color);
@@ -517,13 +524,11 @@ export default class GameOfLife extends Component {
       this.setState({ isPlaying: true });
       if (!this.state.isPaused) {
         const lives = this.getLivePixels();
-        const getDraw = lives[0];
-        const getColors = lives[1];
-        lastPaint = getDraw;
-        lastPaintColors = getColors;
+        lastPaint = lives[0];
+        lastPaintColors = lives[1];
         lastPaintGrid = [this.state.gridWidth, this.state.gridHeight];
-        localStorage.setItem('lastPaint', JSON.stringify(getDraw));
-        localStorage.setItem('lastPaintColors', JSON.stringify(getColors));
+        localStorage.setItem('lastPaint', JSON.stringify(lives[0]));
+        localStorage.setItem('lastPaintColors', JSON.stringify(lives[1]));
         localStorage.setItem('lastPaintGrid', JSON.stringify(lastPaintGrid));
       }
       const canvas = document.getElementById('canvas');
@@ -546,13 +551,17 @@ export default class GameOfLife extends Component {
       canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     }
 
-    for (let i = 0; i < width * height; i++) {
-      this.checkliveOrDead(i) ? toLive.push(i) : toDeath.push(i);
-      if (i === width * height - 1) {
-        toLive.forEach(e => this.toLive(e));
-        toDeath.forEach(e => this.toDeath(e));
-      }
-    }
+    for (let i = 0; i < width * height; i++) this.checkliveOrDead(i) ? toLive.push(i) : toDeath.push(i);
+
+    toLive.forEach(e => {
+      if (this.state.maintainColorPlay) {
+        const index = lastPaint.indexOf(e);
+        if (index !== -1) {
+          this.toLive(e, lastPaintColors[index]);
+        } else this.toLive(e);
+      } else this.toLive(e);
+    });
+    toDeath.forEach(e => this.toDeath(e));
   };
 
   pauseRender = () => {
@@ -668,6 +677,7 @@ export default class GameOfLife extends Component {
           blured.style.display = 'none';
         }
       });
+      isWindowOpened = false;
     } else {
       winEl.style.display = 'initial';
       blured.style.display = 'block';
@@ -675,6 +685,7 @@ export default class GameOfLife extends Component {
         winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
       });
+      isWindowOpened = true;
     }
   };
   toggleConfirmWindow = () => {
@@ -769,6 +780,7 @@ export default class GameOfLife extends Component {
     const saved = JSON.parse(localStorage.getItem('saved'));
     this.setState(
       {
+        isPaused: false,
         gridWidth: saved[i].saveSettings[0],
         gridHeight: saved[i].saveSettings[1],
         pixelSize: saved[i].saveSettings[2],
@@ -834,9 +846,9 @@ export default class GameOfLife extends Component {
       const isEmpty = d => {
         const p = this.getPos(d);
         const check = this.checkLive(p.x, p.y);
-        if (this.state.eraser && check.is && check.color === correntColor) {
+        if (this.state.eraser && check.is && check.color === correntColor && ~~(d / width) !== height) {
           return true;
-        } else if (!this.state.eraser && check.color === correntColor && sameColor) {
+        } else if (!this.state.eraser && check.color === correntColor && sameColor && ~~(d / width) !== height) {
           return true;
         } else return false;
       };
@@ -848,27 +860,28 @@ export default class GameOfLife extends Component {
           this.toLive(x);
         }
       };
-
-      const checkAround = x => {
+      const delay = ms => new Promise(res => setTimeout(res, ms));
+      const checkAround = async (x, check) => {
+        await delay(1);
         const next = x + 1;
         const previous = x - 1;
         const up = x - width;
         const down = x + width;
-        if (isEmpty(next) && !Number.isInteger((i + 1) / width)) {
+        if (isEmpty(next) && !Number.isInteger((x + 1) / width) && check !== 'next') {
           toDraw(next);
-          checkAround(next);
+          checkAround(next, 'previous');
         }
-        if (isEmpty(previous) && !Number.isInteger(i / width)) {
+        if (isEmpty(previous) && !Number.isInteger(x / width) && check !== 'previous') {
           toDraw(previous);
-          checkAround(previous);
+          checkAround(previous, 'next');
         }
-        if (isEmpty(up) && ~~(i / width) !== 0) {
+        if (isEmpty(up) && ~~(x / width) !== 0 && check !== 'up') {
           toDraw(up);
-          checkAround(up);
+          checkAround(up, 'down');
         }
-        if (isEmpty(down) && ~~(i / this.state.gridWidth) !== height) {
+        if (isEmpty(down) && ~~(x / width) !== height && check !== 'down') {
           toDraw(down);
-          checkAround(down);
+          checkAround(down, 'up');
         }
       };
       toDraw(i);
@@ -1055,6 +1068,8 @@ export default class GameOfLife extends Component {
       ctx.fillRect(pos.x, pos.y, pxSize, pxSize);
     });
   };
+
+  windowOpen = boolean => (isWindowOpened = boolean);
 
   render() {
     return (
@@ -1256,8 +1271,25 @@ export default class GameOfLife extends Component {
               localStorage.setItem('speed', e.target.value);
             }}
           ></input>
-
           <p className='controlLabel'>Speed</p>
+          <button
+            className='buttons'
+            style={{
+              backgroundColor: this.state.maintainColorPlay ? '#383838' : 'initial',
+              border: this.state.maintainColorPlay ? 'solid 1px #636363' : 'none',
+            }}
+            title='Maintain Colors while playing if possible'
+            onClick={() => {
+              this.state.maintainColorPlay
+                ? this.setState({ maintainColorPlay: false })
+                : this.setState({ maintainColorPlay: true });
+            }}
+          >
+            <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
+              <path d='M10 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h5v2h2V1h-2v2zm0 15H5l5-6v6zm9-15h-5v2h5v13l-5-6v9h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z' />
+            </svg>
+          </button>
+          <p className='controlLabel'>Maintain</p>
           <div className='devider'></div>
           <select
             title='Insert Patrens'
@@ -1779,7 +1811,7 @@ export default class GameOfLife extends Component {
           {this.state.colorPlate}
         </div>
 
-        <PopUp></PopUp>
+        <PopUp windowOpen={this.windowOpen}></PopUp>
 
         <DownloadWindow
           pauseRender={this.pauseRender}
