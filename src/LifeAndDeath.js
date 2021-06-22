@@ -374,6 +374,7 @@ export default class GameOfLife extends Component {
   };
 
   changeGridWidth = newWidth => {
+    newWidth = Number(newWidth) > 1000 ? 1000 : Number(newWidth);
     const live = this.getLivePixels();
     const pWidth = this.state.gridWidth;
     this.setState({ gridWidth: newWidth }, () => {
@@ -385,6 +386,7 @@ export default class GameOfLife extends Component {
   };
 
   changeGridHeight = newHeight => {
+    newHeight = Number(newHeight) > 1000 ? 1000 : Number(newHeight);
     const live = this.getLivePixels();
     this.setState({ gridHeight: newHeight }, () => {
       this.drawCanvas();
@@ -457,14 +459,18 @@ export default class GameOfLife extends Component {
 
   checkliveOrDead = i => {
     let livePixels = 0;
+    const [canvas, width, height, margin, bgColor, pxSize] = [
+      document.getElementById('canvas'),
+      this.state.gridWidth,
+      this.state.gridHeight,
+      this.state.pixelSpace,
+      this.state.backgroundPixleColor,
+      this.state.pixelSize,
+    ];
+    const firstPixle = Number.isInteger(i / width);
+    const lastPixle = Number.isInteger((i + 1) / width);
+
     const checkLive = p => {
-      const [canvas, width, margin, bgColor, pxSize] = [
-        document.getElementById('canvas'),
-        this.state.gridWidth,
-        this.state.pixelSpace,
-        this.state.backgroundPixleColor,
-        this.state.pixelSize,
-      ];
       const findRow = ~~(p / width);
       const findColumn = p - findRow * width;
       const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
@@ -476,14 +482,10 @@ export default class GameOfLife extends Component {
       return isLive;
     };
 
-    const width = this.state.gridWidth;
-    const height = this.state.gridHeight;
     const isLive = checkLive(i);
-    const firstPixle = Number.isInteger(i / width);
-    const lastPixle = Number.isInteger((i + 1) / width);
 
     const checkNeighbours = n => {
-      if (n >= 0 && n < width * height) if (checkLive(n)) livePixels++;
+      if (n >= 0 && n < width * height && checkLive(n)) livePixels++;
     };
 
     if (!lastPixle) checkNeighbours(i + 1);
@@ -534,6 +536,8 @@ export default class GameOfLife extends Component {
   };
 
   renderLifeDeath = record => {
+    const width = this.state.gridWidth;
+    const height = this.state.gridHeight;
     const toLive = [];
     const toDeath = [];
     if (record) {
@@ -541,12 +545,10 @@ export default class GameOfLife extends Component {
       const ctx = canvas.getContext('2d');
       canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     }
-    for (let i = 0; i < this.state.gridWidth * this.state.gridHeight; i++) {
+    for (let i = 0; i < width * height; i++) {
       this.checkliveOrDead(i) ? toLive.push(i) : toDeath.push(i);
-      if (i === this.state.gridWidth * this.state.gridHeight - 1) {
-        toLive.forEach(e => {
-          this.state.isRandomColor ? this.toLive(e, `hsla(${Math.random() * 360}, 100%, 40%, 1)`) : this.toLive(e);
-        });
+      if (i === width * height - 1) {
+        toLive.forEach(e => this.toLive(e));
         toDeath.forEach(e => this.toDeath(e));
       }
     }
@@ -984,7 +986,7 @@ export default class GameOfLife extends Component {
       const ny = y + canvas.getBoundingClientRect().top + pxSize / 2 - fromTop;
       if (nx <= can.width && nx >= 0 && ny <= can.height && ny >= 0) {
         const p = can.getContext('2d').getImageData(nx, ny, 1, 1).data;
-        const color = this.RGBToHex(p[0], p[1], p[2]);
+        const color = p[3] / 255 === 0 ? this.RGBToHex(p[0], p[1], p[2]) + '00' : this.RGBToHex(p[0], p[1], p[2]);
         ctx.fillStyle = color;
         ctx.fillRect(x, y, pxSize, pxSize);
       }
@@ -1010,7 +1012,8 @@ export default class GameOfLife extends Component {
 
       if (img.width === canvas.width && img.height === canvas.height) {
         const p = canvas.getContext('2d').getImageData(xColor, yColor, 1, 1).data;
-        color = this.RGBToHex(p[0], p[1], p[2]);
+        color = p[3] / 255 === 0 ? this.RGBToHex(p[0], p[1], p[2]) + '00' : this.RGBToHex(p[0], p[1], p[2]);
+        console.log(color)
         this.setState({ pixleColor: color });
       } else {
         canvas.width = img.width;
@@ -1036,11 +1039,17 @@ export default class GameOfLife extends Component {
   };
 
   getTransparentCanvas = () => {
-    const [canvas, can, pxSize] = [document.getElementById('canvas'), document.getElementById('can'), this.state.pixelSize];
+    const [canvas, can, margin, pxSize] = [
+      document.getElementById('canvas'),
+      document.getElementById('can'),
+      this.state.pixelSpace,
+      this.state.pixelSize,
+    ];
     const lives = this.getLivePixels();
     can.width = canvas.width;
     can.height = canvas.height;
     const ctx = can.getContext('2d');
+    if (margin !== 0) ctx.translate(0.5, 0.5);
     lives[0].forEach((e, i) => {
       const pos = this.getPos(e);
       ctx.fillStyle = lives[1][i];
@@ -1315,14 +1324,15 @@ export default class GameOfLife extends Component {
           </div>
           <div className='devider'></div>
           <input
+            id='inputWidth'
             className='inputNumber'
             type='number'
             title='How many squares per row'
             min='5'
-            max='120'
+            max='1000'
             value={this.state.gridWidth}
             disabled={this.state.isPlaying}
-            onChange={e => this.changeGridWidth(Number(e.target.value))}
+            onChange={e => this.changeGridWidth(e.target.value)}
           ></input>
           <p className='controlLabel'>Per Row</p>
           <input
@@ -1330,10 +1340,10 @@ export default class GameOfLife extends Component {
             type='number'
             title='How many squares per column'
             min='5'
-            max='120'
+            max='1000'
             value={this.state.gridHeight}
             disabled={this.state.isPlaying}
-            onChange={e => this.changeGridHeight(Number(e.target.value))}
+            onChange={e => this.changeGridHeight(e.target.value)}
           ></input>
           <p className='controlLabel'>Per Column</p>
 
@@ -1344,15 +1354,7 @@ export default class GameOfLife extends Component {
             min='1'
             max='50'
             value={this.state.pixelSize}
-            onChange={e => {
-              this.changePixelSize(e.target.value);
-
-              // const pixels = document.querySelectorAll('.lifeDeathPixels');
-              // pixels.forEach(el => {
-              //   el.style.width = e.target.value + 'px';
-              //   el.style.height = e.target.value + 'px';
-              // });
-            }}
+            onChange={e => this.changePixelSize(e.target.value)}
           ></input>
           <p className='controlLabel'>Square Size</p>
 
@@ -1361,18 +1363,10 @@ export default class GameOfLife extends Component {
             type='number'
             title='Between squares space in px'
             min='0'
-            max='5'
+            max='10'
             step='0.5'
             value={this.state.pixelSpace * 2}
-            onChange={e => {
-              this.changeLinesSize(e.target.value);
-              // this.setState({ pixelSpace: Number(e.target.value / 2) });
-              // const pixels = document.querySelectorAll('.lifeDeathPixels');
-              // pixels.forEach(el => {
-              //   el.style.margin = Number(e.target.value / 2) + 'px';
-              // });
-              // localStorage.setItem('pixelSpace', Number(e.target.value / 2));
-            }}
+            onChange={e => this.changeLinesSize(e.target.value)}
           ></input>
           <p className='controlLabel'>Grid Lines</p>
         </div>
