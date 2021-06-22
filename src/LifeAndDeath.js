@@ -667,7 +667,6 @@ export default class GameOfLife extends Component {
           blured.style.display = 'none';
         }
       });
-      isWindowOpened = false;
     } else {
       winEl.style.display = 'initial';
       blured.style.display = 'block';
@@ -675,7 +674,6 @@ export default class GameOfLife extends Component {
         winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
       });
-      isWindowOpened = true;
     }
   };
   toggleConfirmWindow = () => {
@@ -1013,7 +1011,7 @@ export default class GameOfLife extends Component {
       if (img.width === canvas.width && img.height === canvas.height) {
         const p = canvas.getContext('2d').getImageData(xColor, yColor, 1, 1).data;
         color = p[3] / 255 === 0 ? this.RGBToHex(p[0], p[1], p[2]) + '00' : this.RGBToHex(p[0], p[1], p[2]);
-        console.log(color)
+        console.log(color);
         this.setState({ pixleColor: color });
       } else {
         canvas.width = img.width;
@@ -1333,9 +1331,40 @@ export default class GameOfLife extends Component {
             value={this.state.gridWidth}
             disabled={this.state.isPlaying}
             onChange={e => this.changeGridWidth(e.target.value)}
+            onClick={e => e.target.select()}
+            onKeyDown={e => {
+              const el = document.getElementById('inputWidthType');
+              el.style.display = 'block';
+              e.target.style.display = 'none';
+              el.value = this.state.gridWidth;
+              el.select();
+            }}
+          ></input>
+          <input
+            id='inputWidthType'
+            className='inputNumber'
+            type='number'
+            title='How many squares per row'
+            min='5'
+            max='1000'
+            disabled={this.state.isPlaying}
+            style={{ display: 'none' }}
+            onKeyPress={e => {
+              if (e.key === 'Enter') {
+                this.changeGridWidth(e.target.value);
+                e.target.style.display = 'none';
+                document.getElementById('inputWidth').style.display = 'block';
+              }
+            }}
+            onBlur={e => {
+              this.changeGridWidth(e.target.value);
+              e.target.style.display = 'none';
+              document.getElementById('inputWidth').style.display = 'block';
+            }}
           ></input>
           <p className='controlLabel'>Per Row</p>
           <input
+            id='inputHeight'
             className='inputNumber'
             type='number'
             title='How many squares per column'
@@ -1344,10 +1373,41 @@ export default class GameOfLife extends Component {
             value={this.state.gridHeight}
             disabled={this.state.isPlaying}
             onChange={e => this.changeGridHeight(e.target.value)}
+            onClick={e => e.target.select()}
+            onKeyDown={e => {
+              const el = document.getElementById('inputHeightType');
+              el.style.display = 'block';
+              e.target.style.display = 'none';
+              el.value = this.state.gridWidth;
+              el.select();
+            }}
+          ></input>
+          <input
+            id='inputHeightType'
+            className='inputNumber'
+            type='number'
+            title='How many squares per column'
+            min='5'
+            max='1000'
+            disabled={this.state.isPlaying}
+            style={{ display: 'none' }}
+            onKeyPress={e => {
+              if (e.key === 'Enter') {
+                this.changeGridHeight(e.target.value);
+                e.target.style.display = 'none';
+                document.getElementById('inputHeight').style.display = 'block';
+              }
+            }}
+            onBlur={e => {
+              this.changeGridHeight(e.target.value);
+              e.target.style.display = 'none';
+              document.getElementById('inputHeight').style.display = 'block';
+            }}
           ></input>
           <p className='controlLabel'>Per Column</p>
 
           <input
+            id='inputPSize'
             className='inputNumber'
             type='number'
             title='Square size in px'
@@ -1355,10 +1415,40 @@ export default class GameOfLife extends Component {
             max='50'
             value={this.state.pixelSize}
             onChange={e => this.changePixelSize(e.target.value)}
+            onClick={e => e.target.select()}
+            onKeyDown={e => {
+              const el = document.getElementById('inputPSizeType');
+              el.style.display = 'block';
+              e.target.style.display = 'none';
+              el.value = this.state.gridWidth;
+              el.select();
+            }}
+          ></input>
+          <input
+            id='inputPSizeType'
+            className='inputNumber'
+            type='number'
+            title='Square size in px'
+            min='1'
+            max='50'
+            style={{ display: 'none' }}
+            onKeyPress={e => {
+              if (e.key === 'Enter') {
+                this.changePixelSize(e.target.value);
+                e.target.style.display = 'none';
+                document.getElementById('inputPSize').style.display = 'block';
+              }
+            }}
+            onBlur={e => {
+              this.changePixelSize(e.target.value);
+              e.target.style.display = 'none';
+              document.getElementById('inputPSize').style.display = 'block';
+            }}
           ></input>
           <p className='controlLabel'>Square Size</p>
 
           <input
+            id='inputMargin'
             className='inputNumber'
             type='number'
             title='Between squares space in px'
@@ -1367,6 +1457,36 @@ export default class GameOfLife extends Component {
             step='0.5'
             value={this.state.pixelSpace * 2}
             onChange={e => this.changeLinesSize(e.target.value)}
+            onClick={e => e.target.select()}
+            onKeyDown={e => {
+              const el = document.getElementById('inputMarginType');
+              el.style.display = 'block';
+              e.target.style.display = 'none';
+              el.value = this.state.gridWidth;
+              el.select();
+            }}
+          ></input>
+          <input
+            id='inputMarginType'
+            className='inputNumber'
+            type='number'
+            title='Between squares space in px'
+            min='0'
+            max='10'
+            step='0.5'
+            style={{ display: 'none' }}
+            onKeyPress={e => {
+              if (e.key === 'Enter') {
+                this.changeLinesSize(e.target.value);
+                e.target.style.display = 'none';
+                document.getElementById('inputMargin').style.display = 'block';
+              }
+            }}
+            onBlur={e => {
+              this.changeLinesSize(e.target.value);
+              e.target.style.display = 'none';
+              document.getElementById('inputMargin').style.display = 'block';
+            }}
           ></input>
           <p className='controlLabel'>Grid Lines</p>
         </div>
