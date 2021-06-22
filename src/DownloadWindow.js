@@ -51,10 +51,13 @@ export default class DownloadWindow extends Component {
     const downloadAnimation = document.getElementById('downloadAnimation');
     const recordAnimation = document.getElementById('recordAnimation');
     const isMP4 = document.getElementById('downloadVideo').checked ? true : false;
+    const framesCount = document.getElementById('framesCount');
     const imgs = [];
 
     recordAnimation.style.display = 'block';
+    framesCount.style.display = 'block';
     for (let i = 1; i <= frmaes; i++) {
+      framesCount.innerHTML = i
       imgs.push(canvas.toDataURL('image/png'));
       this.props.renderLifeDeath(true);
       await this.delay(2);
@@ -69,6 +72,7 @@ export default class DownloadWindow extends Component {
     }
 
     recordAnimation.style.display = 'none';
+    framesCount.style.display = 'none';
     downloadAnimation.style.display = 'block';
 
     createGIF(
@@ -165,6 +169,7 @@ export default class DownloadWindow extends Component {
             </svg>
           </button>
         </div>
+        <p id='framesCount'>0</p>
         <div id='recordAnimation'></div>
         <div id='downloadAnimation'>
           <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>

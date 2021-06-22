@@ -545,6 +545,7 @@ export default class GameOfLife extends Component {
       const ctx = canvas.getContext('2d');
       canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     }
+
     for (let i = 0; i < width * height; i++) {
       this.checkliveOrDead(i) ? toLive.push(i) : toDeath.push(i);
       if (i === width * height - 1) {
