@@ -12,7 +12,7 @@ let interval, lastPaint, lastPaintColors, lastPaintGrid, windowTop, windowLeft, 
 let undo = [];
 let redo = [];
 let xPos, yPos, xDif, yDif, drawDir, dirElem, xColor, yColor;
-let canvasData;
+let renderDate;
 
 export default class GameOfLife extends Component {
   constructor(props) {
@@ -478,33 +478,13 @@ export default class GameOfLife extends Component {
 
   checkGameRules = i => {
     let livePixels = 0;
-    const [canvas, width, height, margin, bgColor, pxSize] = [
-      document.getElementById('canvas'),
-      this.state.gridWidth,
-      this.state.gridHeight,
-      this.state.pixelSpace,
-      this.state.backgroundPixleColor,
-      this.state.pixelSize,
-    ];
+    const [width, height] = [this.state.gridWidth, this.state.gridHeight];
     const firstPixle = Number.isInteger(i / width);
     const lastPixle = Number.isInteger((i + 1) / width);
-
-    const checkLive = p => {
-      const findRow = ~~(p / width);
-      const findColumn = p - findRow * width;
-      const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
-      const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
-
-      const red = y * (canvas.width * 4) + x * 4;
-      const color = this.RGBToHex(canvasData[red], canvasData[red + 1], canvasData[red + 2]);
-      const isLive = color !== bgColor;
-      return isLive;
-    };
-
-    const isLive = checkLive(i);
+    const isLive = renderDate.has(i);
 
     const checkNeighbours = n => {
-      if (n >= 0 && n < width * height && checkLive(n)) livePixels++;
+      if (n >= 0 && n < width * height && renderDate.has(n)) livePixels++;
     };
 
     if (!lastPixle) checkNeighbours(i + 1);
@@ -543,10 +523,8 @@ export default class GameOfLife extends Component {
         localStorage.setItem('lastPaintColors', JSON.stringify(lives[1]));
         localStorage.setItem('lastPaintGrid', JSON.stringify(lastPaintGrid));
       }
-      const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d');
+      renderDate = new Set(this.getLivePixels()[0]);
       interval = setInterval(() => {
-        canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         this.renderLifeDeath();
       }, this.state.speed);
     } else this.pauseRender();
@@ -557,11 +535,7 @@ export default class GameOfLife extends Component {
     const height = this.state.gridHeight;
     const toLive = [];
     const toDeath = [];
-    if (record) {
-      const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d');
-      canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    }
+    if (record && !renderDate) renderDate = new Set(this.getLivePixels()[0]);
 
     for (let i = 0; i < width * height; i++) this.checkGameRules(i) ? toLive.push(i) : toDeath.push(i);
 
@@ -570,9 +544,13 @@ export default class GameOfLife extends Component {
         const index = lastPaint.indexOf(toLive[i]);
         index !== -1 ? this.toLive(toLive[i], lastPaintColors[index]) : this.toLive(toLive[i]);
       } else this.toLive(toLive[i]);
+      renderDate.add(toLive[i]);
     }
 
-    for (let i = 0; i < toDeath.length; i++) this.toDeath(toDeath[i]);
+    for (let i = 0; i < toDeath.length; i++) {
+      renderDate.delete(toDeath[i]);
+      this.toDeath(toDeath[i]);
+    }
   };
 
   pauseRender = () => {
@@ -849,13 +827,33 @@ export default class GameOfLife extends Component {
   paintBuc = i => {
     if (this.state.paintBuc) {
       const start = Date.now();
-      const correntColor = this.checkLive(i).color;
+      const [canvas, width, height, margin, bgColor, pxSize] = [
+        document.getElementById('canvas'),
+        this.state.gridWidth,
+        this.state.gridHeight,
+        this.state.pixelSpace,
+        this.state.backgroundPixleColor,
+        this.state.pixelSize,
+      ];
+      const ctx = canvas.getContext('2d');
+      const ctxData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      
+      const checkLive = p => {
+        const findRow = ~~(p / width);
+        const findColumn = p - findRow * width;
+        const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
+        const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
+        const red = y * (canvas.width * 4) + x * 4;
+        const color = this.RGBToHex(ctxData[red], ctxData[red + 1], ctxData[red + 2]);
+        const isLive = color !== bgColor;
+        return { is: isLive, color: color };
+      };
+      const correntColor = checkLive(i).color;
       const sameColor = correntColor !== this.state.pixleColor;
-      const width = this.state.gridWidth;
-      const height = this.state.gridHeight;
+      
       const isEmpty = d => {
         if (d >= 0 && d < width * height) {
-          const check = this.checkLive(d);
+          const check = checkLive(d);
           if (this.state.eraser && check.is && check.color === correntColor) {
             return true;
           } else if (!this.state.eraser && check.color === correntColor && sameColor) {
@@ -864,12 +862,14 @@ export default class GameOfLife extends Component {
         } else return false;
       };
 
+      const drawn = new Set([]);
       const toDraw = x => {
         if (this.state.eraser) {
           this.toDeath(x);
         } else {
           this.toLive(x);
         }
+        drawn.add(x);
       };
       const delay = ms => new Promise(res => setTimeout(res, ms));
       const checkAround = async x => {
@@ -878,19 +878,19 @@ export default class GameOfLife extends Component {
         const previous = x - 1;
         const up = x - width;
         const down = x + width;
-        if (isEmpty(next) && !Number.isInteger((x + 1) / width)) {
+        if (isEmpty(next) && !Number.isInteger((x + 1) / width) && !drawn.has(next)) {
           toDraw(next);
           checkAround(next);
         }
-        if (isEmpty(previous) && !Number.isInteger(x / width)) {
+        if (isEmpty(previous) && !Number.isInteger(x / width) && !drawn.has(previous)) {
           toDraw(previous);
           checkAround(previous);
         }
-        if (isEmpty(up) && ~~(x / width) !== 0) {
+        if (isEmpty(up) && ~~(x / width) !== 0 && !drawn.has(up)) {
           toDraw(up);
           checkAround(up);
         }
-        if (isEmpty(down) && ~~(x / width) !== height) {
+        if (isEmpty(down) && ~~(x / width) !== height && !drawn.has(down)) {
           toDraw(down);
           checkAround(down);
         }
