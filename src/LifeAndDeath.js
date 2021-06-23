@@ -1083,6 +1083,7 @@ export default class GameOfLife extends Component {
   };
 
   windowOpen = boolean => (isWindowOpened = boolean);
+  restRenderData = () => (renderDate = null);
 
   render() {
     return (
@@ -1834,6 +1835,7 @@ export default class GameOfLife extends Component {
           pixelSize={this.state.pixelSize}
           pixelSpace={this.state.pixelSpace}
           getTransparentCanvas={this.getTransparentCanvas}
+          restRenderData={this.restRenderData}
         ></DownloadWindow>
 
         <div id='saveWindow'>

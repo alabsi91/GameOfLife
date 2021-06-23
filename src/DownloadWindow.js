@@ -82,6 +82,8 @@ export default class DownloadWindow extends Component {
       progressText.innerHTML = ~~((i / frmaes) * 100);
     }
 
+    this.props.restRenderData();
+
     if (delay) for (let i = 1; i < delay; i++) imgs.unshift(imgs[0]);
 
     if (backwards) {
