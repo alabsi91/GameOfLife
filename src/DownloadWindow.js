@@ -53,6 +53,7 @@ export default class DownloadWindow extends Component {
     const recordAnimation = document.getElementById('recordAnimation');
     const isMP4 = document.getElementById('downloadVideo').checked ? true : false;
     const framesCount = document.getElementById('framesCount');
+    const progress = document.getElementById('downloadWindowHeader');
     const imgs = [];
 
     recordAnimation.style.display = 'block';
@@ -61,7 +62,12 @@ export default class DownloadWindow extends Component {
       framesCount.innerHTML = i;
       imgs.push(canvas.toDataURL('image/png'));
       this.props.renderLifeDeath(true);
-      await this.delay(2);
+      await this.delay(1);
+      if (i === 1) {
+        requestNum({ to: 100, duration: (Date.now() - start) * frmaes }, p => {
+          progress.style.background = `linear-gradient(90deg, rgba(45,45,45,1) ${p}%, rgba(83,83,83,1) ${p}%)`;
+        });
+      }
     }
 
     if (delay) for (let i = 0; i < delay; i++) imgs.unshift(imgs[0]);
@@ -89,6 +95,7 @@ export default class DownloadWindow extends Component {
           buttons.forEach(e => (e.disabled = false));
           downloadAnimation.style.display = 'none';
           this.toggleDownloadWindow();
+          progress.style.removeProperty('background');
           console.log((Date.now() - start) / 1000);
         } else console.error(obj.error);
       }
