@@ -174,10 +174,11 @@ export default class GameOfLife extends Component {
     const moveX = x ? ~~(this.state.gridWidth / 2) - x : 0;
     const moveY = y ? ~~this.state.gridWidth * (~~(this.state.gridHeight / 2) - y) : 0;
     const centre = moveX + moveY;
-    patren.forEach((e, i) => {
-      let div = Math.floor(e / pWidth) * dif;
-      this.toLive(e + div + centre, colors ? colors[i] : this.state.pixleColor);
-    });
+
+    for (let i = 0; i < patren.length; i++) {
+      let div = Math.floor(patren[i] / pWidth) * dif;
+      this.toLive(patren[i] + div + centre, colors ? colors[i] : this.state.pixleColor);
+    }
   };
 
   symmetricalX = i => {
@@ -455,16 +456,27 @@ export default class GameOfLife extends Component {
     return lives;
   };
 
-  checkLive = (x, y) => {
-    const [canvas, bgColor, pxSize] = [document.getElementById('canvas'), this.state.backgroundPixleColor, this.state.pixelSize];
+  checkLive = p => {
+    const [canvas, width, margin, bgColor, pxSize] = [
+      document.getElementById('canvas'),
+      this.state.gridWidth,
+      this.state.pixelSpace,
+      this.state.backgroundPixleColor,
+      this.state.pixelSize,
+    ];
     const ctx = canvas.getContext('2d');
+    const findRow = ~~(p / width);
+    const findColumn = p - findRow * width;
+    const x = findColumn * (pxSize + margin * 2) + margin;
+    const y = findRow * (pxSize + margin * 2) + margin;
+
     const data = ctx.getImageData(x + pxSize / 2, y + pxSize / 2, 1, 1).data;
     const color = this.RGBToHex(data[0], data[1], data[2]);
     const isLive = color !== bgColor;
     return { is: isLive, color: color };
   };
 
-  checkliveOrDead = i => {
+  checkGameRules = i => {
     let livePixels = 0;
     const [canvas, width, height, margin, bgColor, pxSize] = [
       document.getElementById('canvas'),
@@ -551,17 +563,16 @@ export default class GameOfLife extends Component {
       canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     }
 
-    for (let i = 0; i < width * height; i++) this.checkliveOrDead(i) ? toLive.push(i) : toDeath.push(i);
+    for (let i = 0; i < width * height; i++) this.checkGameRules(i) ? toLive.push(i) : toDeath.push(i);
 
-    toLive.forEach(e => {
+    for (let i = 0; i < toLive.length; i++) {
       if (this.state.maintainColorPlay) {
-        const index = lastPaint.indexOf(e);
-        if (index !== -1) {
-          this.toLive(e, lastPaintColors[index]);
-        } else this.toLive(e);
-      } else this.toLive(e);
-    });
-    toDeath.forEach(e => this.toDeath(e));
+        const index = lastPaint.indexOf(toLive[i]);
+        index !== -1 ? this.toLive(toLive[i], lastPaintColors[index]) : this.toLive(toLive[i]);
+      } else this.toLive(toLive[i]);
+    }
+
+    for (let i = 0; i < toDeath.length; i++) this.toDeath(toDeath[i]);
   };
 
   pauseRender = () => {
@@ -837,19 +848,19 @@ export default class GameOfLife extends Component {
 
   paintBuc = i => {
     if (this.state.paintBuc) {
-      const pos = this.getPos(i);
-      const checkColor = this.checkLive(pos.x, pos.y);
-      const correntColor = checkColor.color;
+      const start = Date.now();
+      const correntColor = this.checkLive(i).color;
       const sameColor = correntColor !== this.state.pixleColor;
       const width = this.state.gridWidth;
       const height = this.state.gridHeight;
       const isEmpty = d => {
-        const p = this.getPos(d);
-        const check = this.checkLive(p.x, p.y);
-        if (this.state.eraser && check.is && check.color === correntColor && ~~(d / width) !== height) {
-          return true;
-        } else if (!this.state.eraser && check.color === correntColor && sameColor && ~~(d / width) !== height) {
-          return true;
+        if (d >= 0 && d < width * height) {
+          const check = this.checkLive(d);
+          if (this.state.eraser && check.is && check.color === correntColor) {
+            return true;
+          } else if (!this.state.eraser && check.color === correntColor && sameColor) {
+            return true;
+          } else return false;
         } else return false;
       };
 
@@ -861,28 +872,29 @@ export default class GameOfLife extends Component {
         }
       };
       const delay = ms => new Promise(res => setTimeout(res, ms));
-      const checkAround = async (x, check) => {
+      const checkAround = async x => {
         await delay(1);
         const next = x + 1;
         const previous = x - 1;
         const up = x - width;
         const down = x + width;
-        if (isEmpty(next) && !Number.isInteger((x + 1) / width) && check !== 'next') {
+        if (isEmpty(next) && !Number.isInteger((x + 1) / width)) {
           toDraw(next);
-          checkAround(next, 'previous');
+          checkAround(next);
         }
-        if (isEmpty(previous) && !Number.isInteger(x / width) && check !== 'previous') {
+        if (isEmpty(previous) && !Number.isInteger(x / width)) {
           toDraw(previous);
-          checkAround(previous, 'next');
+          checkAround(previous);
         }
-        if (isEmpty(up) && ~~(x / width) !== 0 && check !== 'up') {
+        if (isEmpty(up) && ~~(x / width) !== 0) {
           toDraw(up);
-          checkAround(up, 'down');
+          checkAround(up);
         }
-        if (isEmpty(down) && ~~(x / width) !== height && check !== 'down') {
+        if (isEmpty(down) && ~~(x / width) !== height) {
           toDraw(down);
-          checkAround(down, 'up');
+          checkAround(down);
         }
+        if (x === 0) console.log((Date.now() - start) / 1000);
       };
       toDraw(i);
       checkAround(i);
