@@ -112,6 +112,7 @@ export default class DownloadWindow extends Component {
         renderStatus.innerHTML = 'Downloading file ...';
         saveAs(content, 'Game-of-life.zip');
         renderStatus.style.display = 'none';
+        buttons.forEach(e => (e.disabled = false));
       });
     } else {
       renderStatus.innerHTML = 'Processing gif ...';
@@ -206,13 +207,13 @@ export default class DownloadWindow extends Component {
     const delay = Number(document.getElementById('gifDelay').value);
     const transparent = document.getElementById('transparentPNG').checked ? true : false;
     const transparentZip = document.getElementById('transparentZip').checked ? true : false;
+    buttons.forEach(e => (e.disabled = true));
     if (isPNG) {
       await this.downloadImg(transparent);
       this.toggleDownloadWindow();
     } else if (isZip) {
       this.captureImgs(frames, inval, delay, isBounce, true, transparentZip);
     } else {
-      buttons.forEach(e => (e.disabled = true));
       this.captureImgs(frames, inval, delay, isBounce);
     }
   };

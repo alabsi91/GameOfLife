@@ -557,6 +557,7 @@ export default class GameOfLife extends Component {
     if (this.state.isPlaying) {
       clearInterval(interval);
       this.setState({ isPlaying: false, isPaused: true });
+      renderDate = null;
     }
   };
 
@@ -837,7 +838,7 @@ export default class GameOfLife extends Component {
       ];
       const ctx = canvas.getContext('2d');
       const ctxData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-      
+
       const checkLive = p => {
         const findRow = ~~(p / width);
         const findColumn = p - findRow * width;
@@ -850,7 +851,7 @@ export default class GameOfLife extends Component {
       };
       const correntColor = checkLive(i).color;
       const sameColor = correntColor !== this.state.pixleColor;
-      
+
       const isEmpty = d => {
         if (d >= 0 && d < width * height) {
           const check = checkLive(d);
