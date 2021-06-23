@@ -82,7 +82,7 @@ export default class DownloadWindow extends Component {
       progressText.innerHTML = ~~((i / frmaes) * 100);
     }
 
-    if (delay) for (let i = 0; i < delay; i++) imgs.unshift(imgs[0]);
+    if (delay) for (let i = 1; i < delay; i++) imgs.unshift(imgs[0]);
 
     if (backwards) {
       const revArray = [];
@@ -96,7 +96,6 @@ export default class DownloadWindow extends Component {
     renderStatus.innerHTML = 'Processing Zip ...';
 
     if (zip) {
-      console.log(imgs.length);
       const zip = new JSZip();
       for (let i = 0; i < imgs.length; i++) {
         zip.file(i + '.png', imgs[i]);
