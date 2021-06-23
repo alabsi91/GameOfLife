@@ -3,6 +3,7 @@ import { saveAs } from 'file-saver';
 import React, { Component } from 'react';
 import FFmpeg from '@ffmpeg/ffmpeg';
 import { requestNum } from 'request-animation-number';
+import JSZip from 'jszip';
 
 let windowLeft, windowTop;
 
@@ -45,9 +46,10 @@ export default class DownloadWindow extends Component {
 
   delay = ms => new Promise(res => setTimeout(res, ms));
 
-  captureImgs = async (frmaes, interval, delay, backwards) => {
+  captureImgs = async (frmaes, interval, delay, backwards, zip, transparent) => {
     const start = Date.now();
     const canvas = document.getElementById('canvas');
+    const can = document.getElementById('can');
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
     const downloadAnimation = document.getElementById('downloadAnimation');
     const recordAnimation = document.getElementById('recordAnimation');
@@ -64,14 +66,20 @@ export default class DownloadWindow extends Component {
 
     for (let i = 1; i <= frmaes; i++) {
       renderStatus.innerHTML = 'Recording frame: ' + i;
-      imgs.push(canvas.toDataURL('image/png'));
+
+      if (zip && transparent) {
+        await this.props.getTransparentCanvas();
+        can.toBlob(b => imgs.push(b), 'image/png');
+      } else if (zip) {
+        canvas.toBlob(b => imgs.push(b), 'image/png');
+      } else imgs.push(canvas.toDataURL('image/png'));
+
       this.props.renderLifeDeath(true);
       await this.delay(1);
 
-      requestNum({ from: ((i - 1) / frmaes) * 100, to: (i / frmaes) * 100, duration: 200 }, p => {
-        progress.style.background = `linear-gradient(90deg, rgba(45,45,45,1) ${p}%, rgba(83,83,83,1) ${p}%)`;
-        progressText.innerHTML = ~~p;
-      });
+      progress.style.background = `linear-gradient(90deg, rgba(45,45,45,1) ${~~((i / frmaes) * 100)}%, 
+        rgba(83,83,83,1) ${~~((i / frmaes) * 100)}%)`;
+      progressText.innerHTML = ~~((i / frmaes) * 100);
     }
 
     if (delay) for (let i = 0; i < delay; i++) imgs.unshift(imgs[0]);
@@ -85,43 +93,67 @@ export default class DownloadWindow extends Component {
     recordAnimation.style.display = 'none';
     downloadAnimation.style.display = 'block';
     progress.style.removeProperty('background');
-    renderStatus.innerHTML = 'Processing gif ...';
-    createGIF(
-      {
-        images: imgs,
-        gifWidth: this.props.gridWidth * (this.props.pixelSpace * 2 + this.props.pixelSize),
-        gifHeight: this.props.gridHeight * (this.props.pixelSpace * 2 + this.props.pixelSize),
-        interval: interval / 1000,
-        progressCallback: p => {
-          progress.style.background = `linear-gradient(90deg, rgba(45,45,45,1) ${p * 100}%, rgba(83,83,83,1) ${p * 100}%)`;
-          progressText.innerHTML = ~~(p * 100);
-        },
-      },
-      async obj => {
-        if (!obj.error) {
-          if (isMP4) {
-            renderStatus.innerHTML = 'Converting to mp4 ...';
-            progress.style.display = 'none';
-            progresContainerProcessing.style.display = 'block';
-            await this.downloadVideo(obj.image);
-          } else {
-            renderStatus.innerHTML = 'Downloading file ...';
-            saveAs(obj.image, 'Game-of-life');
-          }
-          buttons.forEach(e => (e.disabled = false));
-          downloadAnimation.style.display = 'none';
-          renderStatus.style.display = 'none';
-          progresContainerProcessing.style.display = 'none';
-          progress.style.display = 'none';
-          progress.style.removeProperty('background');
-          renderStatus.innerHTML = '...';
-          progressText.innerHTML = 0;
-          this.toggleDownloadWindow();
+    renderStatus.innerHTML = 'Processing Zip ...';
 
-          console.log((Date.now() - start) / 1000);
-        } else console.error(obj.error);
+    if (zip) {
+      console.log(imgs.length);
+      const zip = new JSZip();
+      for (let i = 0; i < imgs.length; i++) {
+        zip.file(i + '.png', imgs[i]);
+        await this.delay(1);
       }
-    );
+
+      zip.generateAsync({ type: 'blob' }).then(content => {
+        downloadAnimation.style.display = 'none';
+        progresContainerProcessing.style.display = 'none';
+        progress.style.display = 'none';
+        progress.style.removeProperty('background');
+        renderStatus.innerHTML = '...';
+        progressText.innerHTML = 0;
+        renderStatus.innerHTML = 'Downloading file ...';
+        saveAs(content, 'Game-of-life.zip');
+        renderStatus.style.display = 'none';
+      });
+    } else {
+      renderStatus.innerHTML = 'Processing gif ...';
+
+      createGIF(
+        {
+          images: imgs,
+          gifWidth: this.props.gridWidth * (this.props.pixelSpace * 2 + this.props.pixelSize),
+          gifHeight: this.props.gridHeight * (this.props.pixelSpace * 2 + this.props.pixelSize),
+          interval: interval / 1000,
+          progressCallback: p => {
+            progress.style.background = `linear-gradient(90deg, rgba(45,45,45,1) ${p * 100}%, rgba(83,83,83,1) ${p * 100}%)`;
+            progressText.innerHTML = ~~(p * 100);
+          },
+        },
+        async obj => {
+          if (!obj.error) {
+            if (isMP4) {
+              renderStatus.innerHTML = 'Converting to mp4 ...';
+              progress.style.display = 'none';
+              progresContainerProcessing.style.display = 'block';
+              await this.downloadVideo(obj.image);
+            } else {
+              renderStatus.innerHTML = 'Downloading file ...';
+              saveAs(obj.image, 'Game-of-life');
+            }
+            buttons.forEach(e => (e.disabled = false));
+            downloadAnimation.style.display = 'none';
+            renderStatus.style.display = 'none';
+            progresContainerProcessing.style.display = 'none';
+            progress.style.display = 'none';
+            progress.style.removeProperty('background');
+            renderStatus.innerHTML = '...';
+            progressText.innerHTML = 0;
+            this.toggleDownloadWindow();
+
+            console.log((Date.now() - start) / 1000);
+          } else console.error(obj.error);
+        }
+      );
+    }
   };
 
   downloadImg = async transparent => {
@@ -168,14 +200,18 @@ export default class DownloadWindow extends Component {
   downloadButtonHandle = async () => {
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
     const isPNG = document.getElementById('downloadPNG').checked ? true : false;
+    const isZip = document.getElementById('downloadZip').checked ? true : false;
     const isBounce = document.getElementById('gifBounce').checked ? true : false;
     const frames = Number(document.getElementById('gifFrames').value);
     const inval = Number(document.getElementById('gifInterval').value);
     const delay = Number(document.getElementById('gifDelay').value);
     const transparent = document.getElementById('transparentPNG').checked ? true : false;
+    const transparentZip = document.getElementById('transparentZip').checked ? true : false;
     if (isPNG) {
       await this.downloadImg(transparent);
       this.toggleDownloadWindow();
+    } else if (isZip) {
+      this.captureImgs(frames, inval, delay, isBounce, true, transparentZip);
     } else {
       buttons.forEach(e => (e.disabled = true));
       this.captureImgs(frames, inval, delay, isBounce);
@@ -215,6 +251,7 @@ export default class DownloadWindow extends Component {
           onChange={e => {
             const el = document.querySelectorAll('#gifDownlaodSettings input');
             document.getElementById('transparentPNG').disabled = false;
+            document.getElementById('transparentZip').disabled = true;
             e.target.checked
               ? el.forEach(element => (element.disabled = true))
               : el.forEach(element => (element.disabled = false));
@@ -252,7 +289,26 @@ export default class DownloadWindow extends Component {
             document.getElementById('transparentPNG').disabled = true;
           }}
         ></input>
-        <label htmlFor='downloadGIF'>Download as mp4 video file.</label>
+        <label htmlFor='downloadVideo'>Download as mp4 video file.</label>
+        <br></br>
+        <input
+          type='radio'
+          id='downloadZip'
+          name='download'
+          value='zip'
+          onChange={e => {
+            const el = document.querySelectorAll('#gifDownlaodSettings input');
+            e.target.checked
+              ? el.forEach(element => (element.disabled = false))
+              : el.forEach(element => (element.disabled = true));
+            document.getElementById('gifInterval').disabled = true;
+            document.getElementById('transparentPNG').disabled = true;
+            document.getElementById('transparentZip').disabled = false;
+          }}
+        ></input>
+        <label htmlFor='downloadGIF'>Download as zip of pngs file.</label>
+        <input id='transparentZip' type='checkbox' name='transparentZip' disabled></input>
+        <label htmlFor='transparentZip'>Transparent PNG</label>
         <div id='gifDownlaodSettings'>
           <div>
             <label htmlFor='frames'>Frames : </label>
