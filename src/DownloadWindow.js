@@ -52,22 +52,26 @@ export default class DownloadWindow extends Component {
     const downloadAnimation = document.getElementById('downloadAnimation');
     const recordAnimation = document.getElementById('recordAnimation');
     const isMP4 = document.getElementById('downloadVideo').checked ? true : false;
-    const framesCount = document.getElementById('framesCount');
-    const progress = document.getElementById('downloadWindowHeader');
+    const renderStatus = document.getElementById('renderStatus');
+    const progresContainerProcessing = document.getElementById('progresContainerProcessing');
+    const progress = document.getElementById('progresContainer');
+    const progressText = document.querySelector('#progresContainer p');
     const imgs = [];
 
     recordAnimation.style.display = 'block';
-    framesCount.style.display = 'block';
+    renderStatus.style.display = 'block';
+    progress.style.display = 'flex';
+
     for (let i = 1; i <= frmaes; i++) {
-      framesCount.innerHTML = i;
+      renderStatus.innerHTML = 'Recording frame: ' + i;
       imgs.push(canvas.toDataURL('image/png'));
       this.props.renderLifeDeath(true);
       await this.delay(1);
-      if (i === 1) {
-        requestNum({ to: 100, duration: (Date.now() - start) * frmaes }, p => {
-          progress.style.background = `linear-gradient(90deg, rgba(45,45,45,1) ${p}%, rgba(83,83,83,1) ${p}%)`;
-        });
-      }
+
+      requestNum({ from: ((i - 1) / frmaes) * 100, to: (i / frmaes) * 100, duration: 200 }, p => {
+        progress.style.background = `linear-gradient(90deg, rgba(45,45,45,1) ${p}%, rgba(83,83,83,1) ${p}%)`;
+        progressText.innerHTML = ~~p;
+      });
     }
 
     if (delay) for (let i = 0; i < delay; i++) imgs.unshift(imgs[0]);
@@ -79,23 +83,41 @@ export default class DownloadWindow extends Component {
     }
 
     recordAnimation.style.display = 'none';
-    framesCount.style.display = 'none';
     downloadAnimation.style.display = 'block';
-
+    progress.style.removeProperty('background');
+    renderStatus.innerHTML = 'Processing gif ...';
     createGIF(
       {
         images: imgs,
         gifWidth: this.props.gridWidth * (this.props.pixelSpace * 2 + this.props.pixelSize),
         gifHeight: this.props.gridHeight * (this.props.pixelSpace * 2 + this.props.pixelSize),
         interval: interval / 1000,
+        progressCallback: p => {
+          progress.style.background = `linear-gradient(90deg, rgba(45,45,45,1) ${p * 100}%, rgba(83,83,83,1) ${p * 100}%)`;
+          progressText.innerHTML = ~~(p * 100);
+        },
       },
       async obj => {
         if (!obj.error) {
-          isMP4 ? await this.downloadVideo(obj.image) : saveAs(obj.image, 'Game-of-life');
+          if (isMP4) {
+            renderStatus.innerHTML = 'Converting to mp4 ...';
+            progress.style.display = 'none';
+            progresContainerProcessing.style.display = 'block';
+            await this.downloadVideo(obj.image);
+          } else {
+            renderStatus.innerHTML = 'Downloading file ...';
+            saveAs(obj.image, 'Game-of-life');
+          }
           buttons.forEach(e => (e.disabled = false));
           downloadAnimation.style.display = 'none';
-          this.toggleDownloadWindow();
+          renderStatus.style.display = 'none';
+          progresContainerProcessing.style.display = 'none';
+          progress.style.display = 'none';
           progress.style.removeProperty('background');
+          renderStatus.innerHTML = '...';
+          progressText.innerHTML = 0;
+          this.toggleDownloadWindow();
+
           console.log((Date.now() - start) / 1000);
         } else console.error(obj.error);
       }
@@ -178,7 +200,6 @@ export default class DownloadWindow extends Component {
             </svg>
           </button>
         </div>
-        <p id='framesCount'>0</p>
         <div id='recordAnimation'></div>
         <div id='downloadAnimation'>
           <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
@@ -249,6 +270,12 @@ export default class DownloadWindow extends Component {
             <input id='gifBounce' type='checkbox' name='gifBounce' disabled></input>
             <label htmlFor='gifBounce'>Forward and Backward</label>
           </div>
+        </div>
+        <p id='renderStatus'></p>
+        <div id='progresContainerProcessing'></div>
+        <div id='progresContainer'>
+          <p>0</p>
+          <span>%</span>
         </div>
         <div id='downloadCancleContainer'>
           <button onClick={this.downloadButtonHandle}>Download</button>
