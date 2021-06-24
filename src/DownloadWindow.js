@@ -269,8 +269,10 @@ export default class DownloadWindow extends Component {
       this.toggleDownloadWindow();
     } else if (this.props.checkColor()) {
       if (isZip) {
+        this.props.saveLastPaint();
         this.setState({ runnig: true }, () => this.captureImgs(frames, inval, delay, isBounce, true, transparentZip));
       } else {
+        this.props.saveLastPaint();
         this.setState({ runnig: true }, () => this.captureImgs(frames, inval, delay, isBounce));
       }
     } else this.toggleDownloadWindow();

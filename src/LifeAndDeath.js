@@ -518,13 +518,7 @@ export default class GameOfLife extends Component {
     } else if (!this.state.isPlaying) {
       this.setState({ isPlaying: true });
       if (!this.state.isPaused) {
-        const lives = this.getLivePixels();
-        lastPaint = lives[0];
-        lastPaintColors = lives[1];
-        lastPaintGrid = [this.state.gridWidth, this.state.gridHeight];
-        localStorage.setItem('lastPaint', JSON.stringify(lives[0]));
-        localStorage.setItem('lastPaintColors', JSON.stringify(lives[1]));
-        localStorage.setItem('lastPaintGrid', JSON.stringify(lastPaintGrid));
+        this.saveLastPaint();
       }
       renderDate = new Set(this.getLivePixels()[0]);
       interval = setInterval(() => {
@@ -1083,6 +1077,16 @@ export default class GameOfLife extends Component {
       ctx.fillStyle = lives[1][i];
       ctx.fillRect(pos.x, pos.y, pxSize, pxSize);
     });
+  };
+
+  saveLastPaint = () => {
+    const lives = this.getLivePixels();
+    lastPaint = lives[0];
+    lastPaintColors = lives[1];
+    lastPaintGrid = [this.state.gridWidth, this.state.gridHeight];
+    localStorage.setItem('lastPaint', JSON.stringify(lives[0]));
+    localStorage.setItem('lastPaintColors', JSON.stringify(lives[1]));
+    localStorage.setItem('lastPaintGrid', JSON.stringify(lastPaintGrid));
   };
 
   windowOpen = boolean => (isWindowOpened = boolean);
@@ -1844,6 +1848,7 @@ export default class GameOfLife extends Component {
           getTransparentCanvas={this.getTransparentCanvas}
           restRenderData={this.restRenderData}
           checkColor={this.checkColorsBefroRender}
+          saveLastPaint={this.saveLastPaint}
         ></DownloadWindow>
 
         <div id='saveWindow'>
