@@ -51,7 +51,8 @@ export default class DownloadWindow extends Component {
     const canvas = document.getElementById('canvas');
     const can = document.getElementById('can');
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
-    const downloadAnimation = document.getElementById('downloadAnimation');
+    const gifAnimation = document.getElementById('gifAnimation');
+    const videoAnimation = document.getElementById('videoAnimation');
     const recordAnimation = document.getElementById('recordAnimation');
     const isMP4 = document.getElementById('downloadVideo').checked ? true : false;
     const renderStatus = document.getElementById('renderStatus');
@@ -90,8 +91,8 @@ export default class DownloadWindow extends Component {
       imgs.push(...revArray);
     }
 
+    progress.style.removeProperty('background');
     recordAnimation.style.display = 'none';
-    downloadAnimation.style.display = 'block';
     progress.style.removeProperty('background');
     renderStatus.innerHTML = 'Processing Zip ...';
 
@@ -104,18 +105,39 @@ export default class DownloadWindow extends Component {
       }
 
       zip.generateAsync({ type: 'blob' }).then(content => {
-        downloadAnimation.style.display = 'none';
+        saveAs(content, 'Game-of-life.zip');
+
         progresContainerProcessing.style.display = 'none';
         progress.style.display = 'none';
         progress.style.removeProperty('background');
         renderStatus.innerHTML = '...';
         progressText.innerHTML = 0;
-        renderStatus.innerHTML = 'Downloading file ...';
-        saveAs(content, 'Game-of-life.zip');
         renderStatus.style.display = 'none';
         buttons.forEach(e => (e.disabled = false));
+        this.toggleDownloadWindow();
       });
+    } else if (isMP4) {
+      videoAnimation.style.display = 'block';
+      progressText.innerHTML = 0;
+      progress.style.display = 'none';
+      progresContainerProcessing.style.display = 'block';
+      renderStatus.innerHTML = 'Processing Images ...';
+
+      await this.downloadVideo(imgs, interval.toString());
+
+      buttons.forEach(e => (e.disabled = false));
+      videoAnimation.style.display = 'none';
+      renderStatus.style.display = 'none';
+      progresContainerProcessing.style.display = 'none';
+      progress.style.display = 'none';
+      progress.style.removeProperty('background');
+      renderStatus.innerHTML = '...';
+      progressText.innerHTML = 0;
+      this.toggleDownloadWindow();
+
+      console.log((Date.now() - start) / 1000);
     } else {
+      gifAnimation.style.display = 'block';
       renderStatus.innerHTML = 'Processing gif ...';
 
       createGIF(
@@ -131,17 +153,10 @@ export default class DownloadWindow extends Component {
         },
         async obj => {
           if (!obj.error) {
-            if (isMP4) {
-              renderStatus.innerHTML = 'Converting to mp4 ...';
-              progress.style.display = 'none';
-              progresContainerProcessing.style.display = 'block';
-              await this.downloadVideo(obj.image);
-            } else {
-              renderStatus.innerHTML = 'Downloading file ...';
-              saveAs(obj.image, 'Game-of-life');
-            }
+            saveAs(obj.image, 'Game-of-life');
+
             buttons.forEach(e => (e.disabled = false));
-            downloadAnimation.style.display = 'none';
+            gifAnimation.style.display = 'none';
             renderStatus.style.display = 'none';
             progresContainerProcessing.style.display = 'none';
             progress.style.display = 'none';
@@ -173,31 +188,6 @@ export default class DownloadWindow extends Component {
     }
   };
 
-  downloadVideo = async gif => {
-    const { createFFmpeg, fetchFile } = FFmpeg;
-    const ffmpeg = createFFmpeg();
-    await ffmpeg.load();
-    ffmpeg.FS('writeFile', 'Game-of-life.gif', await fetchFile(gif));
-    await ffmpeg.run(
-      '-f',
-      'gif',
-      '-i',
-      'Game-of-life.gif',
-      '-pix_fmt',
-      'yuv420p',
-      '-c:v',
-      'libx264',
-      '-movflags',
-      '+faststart',
-      '-filter:v',
-      "crop='floor(in_w/2)*2:floor(in_h/2)*2'",
-      'Game-of-life.mp4'
-    );
-    const data = ffmpeg.FS('readFile', 'Game-of-life.mp4');
-    const res = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-    saveAs(res, 'Game-of-life');
-  };
-
   downloadButtonHandle = async () => {
     const buttons = document.querySelectorAll('#downloadCancleContainer button');
     const isPNG = document.getElementById('downloadPNG').checked ? true : false;
@@ -208,16 +198,75 @@ export default class DownloadWindow extends Component {
     const delay = Number(document.getElementById('gifDelay').value);
     const transparent = document.getElementById('transparentPNG').checked ? true : false;
     const transparentZip = document.getElementById('transparentZip').checked ? true : false;
-    buttons.forEach(e => (e.disabled = true));
     this.props.restRenderData();
     if (isPNG) {
       await this.downloadImg(transparent);
       this.toggleDownloadWindow();
-    } else if (isZip) {
-      this.captureImgs(frames, inval, delay, isBounce, true, transparentZip);
-    } else {
-      this.captureImgs(frames, inval, delay, isBounce);
+    } else if (this.props.checkColor()) {
+      if (isZip) {
+        buttons.forEach(e => (e.disabled = true));
+        this.captureImgs(frames, inval, delay, isBounce, true, transparentZip);
+      } else {
+        buttons.forEach(e => (e.disabled = true));
+        this.captureImgs(frames, inval, delay, isBounce);
+      }
+    } else this.toggleDownloadWindow();
+  };
+
+  downloadVideo = async (imgs, fps) => {
+    const { createFFmpeg, fetchFile } = FFmpeg;
+
+    const progress = document.getElementById('progresContainer');
+    const progressText = document.querySelector('#progresContainer p');
+    const renderStatus = document.getElementById('renderStatus');
+    const progresContainerProcessing = document.getElementById('progresContainerProcessing');
+
+    const ffmpeg = createFFmpeg({
+      progress: p => {
+        progress.style.display = 'flex';
+        progresContainerProcessing.style.display = 'none';
+        renderStatus.innerHTML = 'Converting to mp4 ...';
+        progress.style.background = `linear-gradient(90deg, rgba(45,45,45,1) ${p.ratio * 100}%, rgba(83,83,83,1) ${
+          p.ratio * 100
+        }%)`;
+        progressText.innerHTML = ~~(p.ratio * 100);
+      },
+    });
+
+    await ffmpeg.load();
+
+    for (let i = 0; i < imgs.length; i++) {
+      const NumLength = i.toString().length;
+      const name = '0000'.slice(NumLength) + i + '.png';
+      ffmpeg.FS('writeFile', name, await fetchFile(imgs[i]));
+      await this.delay(100);
     }
+
+    await ffmpeg.run(
+      '-framerate',
+      fps,
+      '-pattern_type',
+      'glob',
+      '-i',
+      '*.png',
+      '-shortest',
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      'life.mp4'
+    );
+
+    for (let i = 0; i < imgs.length; i++) {
+      const NumLength = i.toString().length;
+      const name = '0000'.slice(NumLength) + i + '.png';
+      ffmpeg.FS('unlink', name);
+    }
+
+    const data = ffmpeg.FS('readFile', 'life.mp4');
+    const res = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+
+    saveAs(res, 'life.mp4');
   };
 
   render() {
@@ -238,12 +287,21 @@ export default class DownloadWindow extends Component {
             </svg>
           </button>
         </div>
+
         <div id='recordAnimation'></div>
-        <div id='downloadAnimation'>
+        <div className='downloadAnimation' id='gifAnimation'>
           <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
-            <path d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z' />
+            <rect height='6' width='1.5' x='11.5' y='9' />
+            <path d='M9,9H6c-0.6,0-1,0.5-1,1v4c0,0.5,0.4,1,1,1h3c0.6,0,1-0.5,1-1v-2H8.5v1.5h-2v-3H10V10C10,9.5,9.6,9,9,9z' />
+            <polygon points='19,10.5 19,9 14.5,9 14.5,15 16,15 16,13 18,13 18,11.5 16,11.5 16,10.5' />
           </svg>
         </div>
+        <div className='downloadAnimation' id='videoAnimation'>
+          <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='#D7D7D7'>
+            <path d='M18 3v2h-2V3H8v2H6V3H4v18h2v-2h2v2h8v-2h2v2h2V3h-2zM8 17H6v-2h2v2zm0-4H6v-2h2v2zm0-4H6V7h2v2zm10 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z' />
+          </svg>
+        </div>
+
         <input
           type='radio'
           id='downloadPNG'
@@ -270,6 +328,8 @@ export default class DownloadWindow extends Component {
           value='gif'
           onChange={e => {
             const el = document.querySelectorAll('#gifDownlaodSettings input');
+            document.getElementById('fpsInterval').innerHTML = 'Interval (ms) : ';
+            document.getElementById('gifInterval').value = 100;
             e.target.checked
               ? el.forEach(element => (element.disabled = false))
               : el.forEach(element => (element.disabled = true));
@@ -285,6 +345,8 @@ export default class DownloadWindow extends Component {
           value='video'
           onChange={e => {
             const el = document.querySelectorAll('#gifDownlaodSettings input');
+            document.getElementById('fpsInterval').innerHTML = 'FrameRate fps : ';
+            document.getElementById('gifInterval').value = 30;
             e.target.checked
               ? el.forEach(element => (element.disabled = false))
               : el.forEach(element => (element.disabled = true));
@@ -317,7 +379,9 @@ export default class DownloadWindow extends Component {
             <input id='gifFrames' type='number' name='frames' defaultValue='10' disabled></input>
           </div>
           <div>
-            <label htmlFor='interval'>Interval (ms) : </label>
+            <label id='fpsInterval' htmlFor='interval'>
+              Interval (ms) :{' '}
+            </label>
             <input id='gifInterval' type='number' name='interval' defaultValue='100' disabled></input>
           </div>
           <div>
@@ -343,50 +407,28 @@ export default class DownloadWindow extends Component {
     );
   }
 }
-// downloadVideo = async imgs => {
+
+// downloadVideo = async gif => {
 //   const { createFFmpeg, fetchFile } = FFmpeg;
-
-//   const ffmpeg = createFFmpeg({ log: true });
+//   const ffmpeg = createFFmpeg();
 //   await ffmpeg.load();
-
-//   for (let i = 0; i < imgs.length; i++) {
-//     ffmpeg.FS('writeFile', `life00${i}.png`, await fetchFile(imgs[i]));
-//     await this.delay(100);
-//   }
-
-//   // await ffmpeg.run(
-//   //   '-f',
-//   //   'image2',
-//   //   '-framerate',
-//   //   '2',
-//   //   '-pattern_type',
-//   //   'glob',
-//   //   '-i',
-//   //   '*.png',
-//   //   '-vf',
-//   //   'scale=750x750',
-//   //   'life.gif'
-//   // );
-
+//   ffmpeg.FS('writeFile', 'Game-of-life.gif', await fetchFile(gif));
 //   await ffmpeg.run(
-//     '-framerate',
-//     '2',
-//     '-pattern_type',
-//     'glob',
+//     '-f',
+//     'gif',
 //     '-i',
-//     '*.png',
-//     '-shortest',
-//     '-c:v',
-//     'libx264',
+//     'Game-of-life.gif',
 //     '-pix_fmt',
 //     'yuv420p',
-//     'life.mp4'
+//     '-c:v',
+//     'libx264',
+//     '-movflags',
+//     '+faststart',
+//     '-filter:v',
+//     "crop='floor(in_w/2)*2:floor(in_h/2)*2'",
+//     'Game-of-life.mp4'
 //   );
-
-//   for (let i = 0; i < imgs.length; i++) ffmpeg.FS('unlink', `life00${i}.png`);
-
-//   const data = ffmpeg.FS('readFile', 'life.mp4');
+//   const data = ffmpeg.FS('readFile', 'Game-of-life.mp4');
 //   const res = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-
-//   saveAs(res, 'life.mp4');
+//   saveAs(res, 'Game-of-life');
 // };

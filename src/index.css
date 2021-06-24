@@ -268,8 +268,8 @@ p {
 }
 #recordAnimation {
   position: absolute;
-  right: 10px;
-  top: 28px;
+  top: 379px;
+  left: 7px;
   display: none;
   width: 10px;
   height: 10px;
@@ -290,22 +290,21 @@ p {
     opacity: 0;
   }
 }
-#downloadAnimation {
+.downloadAnimation {
   overflow: hidden;
   width: 24px;
   height: 24px;
   border-radius: 5px;
   position: absolute;
-  right: 10px;
-  top: 28px;
+  top: 372px;
+  left: 0px;
   display: none;
 }
-#downloadAnimation svg {
+.downloadAnimation svg {
   position: relative;
-  animation-name: download;
-  animation-duration: 1s;
+  animation-name: record;
+  animation-duration: 1.5s;
   animation-iteration-count: infinite;
-  animation-timing-function: linear;
 }
 
 @keyframes download {

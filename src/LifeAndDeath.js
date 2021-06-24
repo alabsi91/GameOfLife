@@ -513,7 +513,9 @@ export default class GameOfLife extends Component {
   };
 
   play = () => {
-    if (!this.state.isPlaying) {
+    if (this.state.pixleColor === this.state.backgroundPixleColor) {
+      this.openPopUp('Drawing color and background color should not be the same');
+    } else if (!this.state.isPlaying) {
       this.setState({ isPlaying: true });
       if (!this.state.isPaused) {
         const lives = this.getLivePixels();
@@ -1085,6 +1087,10 @@ export default class GameOfLife extends Component {
 
   windowOpen = boolean => (isWindowOpened = boolean);
   restRenderData = () => (renderDate = null);
+  checkColorsBefroRender = () =>
+    this.state.pixleColor === this.state.backgroundPixleColor
+      ? this.openPopUp('Drawing color and background color should not be the same')
+      : true;
 
   render() {
     return (
@@ -1837,6 +1843,7 @@ export default class GameOfLife extends Component {
           pixelSpace={this.state.pixelSpace}
           getTransparentCanvas={this.getTransparentCanvas}
           restRenderData={this.restRenderData}
+          checkColor={this.checkColorsBefroRender}
         ></DownloadWindow>
 
         <div id='saveWindow'>
