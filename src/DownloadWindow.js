@@ -98,7 +98,8 @@ export default class DownloadWindow extends Component {
     if (zip) {
       const zip = new JSZip();
       for (let i = 0; i < imgs.length; i++) {
-        zip.file(i + '.png', imgs[i]);
+        const NumLength = i.toString().length;
+        zip.file('0000'.slice(NumLength) + i + '.png', imgs[i]);
         await this.delay(1);
       }
 
@@ -342,3 +343,50 @@ export default class DownloadWindow extends Component {
     );
   }
 }
+// downloadVideo = async imgs => {
+//   const { createFFmpeg, fetchFile } = FFmpeg;
+
+//   const ffmpeg = createFFmpeg({ log: true });
+//   await ffmpeg.load();
+
+//   for (let i = 0; i < imgs.length; i++) {
+//     ffmpeg.FS('writeFile', `life00${i}.png`, await fetchFile(imgs[i]));
+//     await this.delay(100);
+//   }
+
+//   // await ffmpeg.run(
+//   //   '-f',
+//   //   'image2',
+//   //   '-framerate',
+//   //   '2',
+//   //   '-pattern_type',
+//   //   'glob',
+//   //   '-i',
+//   //   '*.png',
+//   //   '-vf',
+//   //   'scale=750x750',
+//   //   'life.gif'
+//   // );
+
+//   await ffmpeg.run(
+//     '-framerate',
+//     '2',
+//     '-pattern_type',
+//     'glob',
+//     '-i',
+//     '*.png',
+//     '-shortest',
+//     '-c:v',
+//     'libx264',
+//     '-pix_fmt',
+//     'yuv420p',
+//     'life.mp4'
+//   );
+
+//   for (let i = 0; i < imgs.length; i++) ffmpeg.FS('unlink', `life00${i}.png`);
+
+//   const data = ffmpeg.FS('readFile', 'life.mp4');
+//   const res = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+
+//   saveAs(res, 'life.mp4');
+// };
