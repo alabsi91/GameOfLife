@@ -263,16 +263,14 @@ export default class DownloadWindow extends Component {
     const delay = Number(document.getElementById('gifDelay').value);
     const transparent = document.getElementById('transparentPNG').checked ? true : false;
     const transparentZip = document.getElementById('transparentZip').checked ? true : false;
-    this.props.restRenderData();
+    this.props.resetRenderData();
     if (isPNG) {
       await this.downloadImg(transparent);
       this.toggleDownloadWindow();
     } else if (this.props.checkColor()) {
       if (isZip && frames > 0 && delay >= 0) {
-        this.props.saveLastPaint();
         this.setState({ runnig: true }, () => this.captureImgs(frames, inval, delay, isBounce, true, transparentZip));
       } else if (frames > 0 && inval > 0 && delay >= 0) {
-        this.props.saveLastPaint();
         this.setState({ runnig: true }, () => this.captureImgs(frames, inval, delay, isBounce));
       } else this.props.popUp('Please enter a valid values');
     } else this.toggleDownloadWindow();

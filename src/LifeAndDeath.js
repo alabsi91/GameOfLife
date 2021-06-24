@@ -781,6 +781,7 @@ export default class GameOfLife extends Component {
         localStorage.setItem('pixelSpace', saved[i].saveSettings[3]);
         localStorage.setItem('backgroundPixleColor', saved[i].saveSettings[4]);
         this.applyPattren(saved[i].livePixels, saved[i].pixelsColors, saved[i].saveSettings[0]);
+        this.saveLastPaint();
         this.toggleLoadWindow();
         undo = [];
         redo = [];
@@ -1090,7 +1091,7 @@ export default class GameOfLife extends Component {
   };
 
   windowOpen = boolean => (isWindowOpened = boolean);
-  restRenderData = () => (renderDate = null);
+  resetRenderData = () => (renderDate = null);
   checkColorsBefroRender = () =>
     this.state.pixleColor === this.state.backgroundPixleColor
       ? this.openPopUp('Drawing color and background color should not be the same')
@@ -1846,9 +1847,8 @@ export default class GameOfLife extends Component {
           pixelSize={this.state.pixelSize}
           pixelSpace={this.state.pixelSpace}
           getTransparentCanvas={this.getTransparentCanvas}
-          restRenderData={this.restRenderData}
+          resetRenderData={this.resetRenderData}
           checkColor={this.checkColorsBefroRender}
-          saveLastPaint={this.saveLastPaint}
           popUp={this.openPopUp}
         ></DownloadWindow>
 
