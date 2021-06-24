@@ -1849,6 +1849,7 @@ export default class GameOfLife extends Component {
           restRenderData={this.restRenderData}
           checkColor={this.checkColorsBefroRender}
           saveLastPaint={this.saveLastPaint}
+          popUp={this.openPopUp}
         ></DownloadWindow>
 
         <div id='saveWindow'>

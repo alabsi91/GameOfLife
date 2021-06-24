@@ -268,13 +268,13 @@ export default class DownloadWindow extends Component {
       await this.downloadImg(transparent);
       this.toggleDownloadWindow();
     } else if (this.props.checkColor()) {
-      if (isZip) {
+      if (isZip && frames > 0 && delay >= 0) {
         this.props.saveLastPaint();
         this.setState({ runnig: true }, () => this.captureImgs(frames, inval, delay, isBounce, true, transparentZip));
-      } else {
+      } else if (frames > 0 && inval > 0 && delay >= 0) {
         this.props.saveLastPaint();
         this.setState({ runnig: true }, () => this.captureImgs(frames, inval, delay, isBounce));
-      }
+      } else this.props.popUp('Please enter a valid values');
     } else this.toggleDownloadWindow();
   };
 
@@ -289,7 +289,7 @@ export default class DownloadWindow extends Component {
             window.addEventListener('mousemove', this.grabDownload);
           }}
         >
-          <p>Download your drawing as .png/.gif/.mp4</p>
+          <p>Download your drawing as .png/.gif/.mp4/.zip</p>
           <button
             disabled={this.state.runnig}
             id='closeDownloadWindow'
@@ -329,16 +329,16 @@ export default class DownloadWindow extends Component {
           defaultChecked
           onChange={e => {
             const el = document.querySelectorAll('#gifDownlaodSettings input');
-            document.getElementById('transparentPNG').disabled = false;
-            document.getElementById('transparentZip').disabled = true;
             e.target.checked
               ? el.forEach(element => (element.disabled = true))
               : el.forEach(element => (element.disabled = false));
+            document.getElementById('transparentPNG').disabled = false;
+            document.getElementById('transparentZip').disabled = true;
           }}
         ></input>
         <label htmlFor='downloadPNG'>Download as png file.</label>
         <input id='transparentPNG' type='checkbox' name='transparentPNG'></input>
-        <label htmlFor='transparentPNG'>Transparent PNG</label>
+        <label htmlFor='transparentPNG'>Transparent png.</label>
         <br></br>
         <input
           type='radio'
@@ -353,6 +353,7 @@ export default class DownloadWindow extends Component {
               ? el.forEach(element => (element.disabled = false))
               : el.forEach(element => (element.disabled = true));
             document.getElementById('transparentPNG').disabled = true;
+            document.getElementById('transparentZip').disabled = true;
           }}
         ></input>
         <label htmlFor='downloadGIF'>Download as animated gif file.</label>
@@ -370,6 +371,7 @@ export default class DownloadWindow extends Component {
               ? el.forEach(element => (element.disabled = false))
               : el.forEach(element => (element.disabled = true));
             document.getElementById('transparentPNG').disabled = true;
+            document.getElementById('transparentZip').disabled = true;
           }}
         ></input>
         <label htmlFor='downloadVideo'>Download as mp4 video file.</label>
@@ -389,9 +391,9 @@ export default class DownloadWindow extends Component {
             document.getElementById('transparentZip').disabled = false;
           }}
         ></input>
-        <label htmlFor='downloadGIF'>Download as zip of pngs file.</label>
+        <label htmlFor='downloadGIF'>Download as zip file of pngs.</label>
         <input id='transparentZip' type='checkbox' name='transparentZip' disabled></input>
-        <label htmlFor='transparentZip'>Transparent PNG</label>
+        <label htmlFor='transparentZip'>Transparent png.</label>
         <div id='gifDownlaodSettings'>
           <div>
             <input id='gifFrames' type='number' name='frames' defaultValue='10' disabled></input>
