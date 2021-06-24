@@ -229,6 +229,7 @@ p {
   margin: auto;
   width: 75%;
   display: flex;
+  flex-direction: row-reverse;
   align-items: center;
   justify-content: space-between;
 }
@@ -247,6 +248,9 @@ p {
   margin: 10px 0px;
 }
 #gifDownlaodSettings input[type='number']:disabled {
+  color: #6d6d6d;
+}
+#gifDownlaodSettings input[type='number']:disabled + label {
   color: #6d6d6d;
 }
 #gifDownlaodSettings input[type='checkbox'] {

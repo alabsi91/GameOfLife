@@ -394,18 +394,18 @@ export default class DownloadWindow extends Component {
         <label htmlFor='transparentZip'>Transparent PNG</label>
         <div id='gifDownlaodSettings'>
           <div>
-            <label htmlFor='frames'>Frames : </label>
             <input id='gifFrames' type='number' name='frames' defaultValue='10' disabled></input>
+            <label htmlFor='frames'>Frames : </label>
           </div>
           <div>
+            <input id='gifInterval' type='number' name='interval' defaultValue='100' disabled></input>
             <label id='fpsInterval' htmlFor='interval'>
               Interval (ms) :{' '}
             </label>
-            <input id='gifInterval' type='number' name='interval' defaultValue='100' disabled></input>
           </div>
           <div>
-            <label htmlFor='gifDelay'>Delay (frames) : </label>
             <input id='gifDelay' type='number' name='gifDelay' defaultValue='4' disabled></input>
+            <label htmlFor='gifDelay'>Delay (frames) : </label>
           </div>
           <div>
             <input id='gifBounce' type='checkbox' name='gifBounce' disabled></input>
