@@ -91,7 +91,7 @@ p {
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 14px;
-  color: #d7d7d7;
+  color: hsl(0, 0%, 84%);
   font-family: system-ui;
 }
 #downloadWindow {

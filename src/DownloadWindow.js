@@ -82,8 +82,6 @@ export default class DownloadWindow extends Component {
       progressText.innerHTML = ~~((i / frmaes) * 100);
     }
 
-    this.props.restRenderData();
-
     if (delay) for (let i = 1; i < delay; i++) imgs.unshift(imgs[0]);
 
     if (backwards) {
@@ -210,6 +208,7 @@ export default class DownloadWindow extends Component {
     const transparent = document.getElementById('transparentPNG').checked ? true : false;
     const transparentZip = document.getElementById('transparentZip').checked ? true : false;
     buttons.forEach(e => (e.disabled = true));
+    this.props.restRenderData();
     if (isPNG) {
       await this.downloadImg(transparent);
       this.toggleDownloadWindow();

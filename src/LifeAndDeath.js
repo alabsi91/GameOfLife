@@ -319,7 +319,8 @@ export default class GameOfLife extends Component {
     ctx.fillStyle = color
       ? color
       : this.state.isRandomColor
-      ? `hsla(${Math.random() * 360}, 100%, 40%, 1)`
+      ? // ? `hsla(0, 0%, ${Math.floor(Math.random() * (100 - 50 + 1) + 50)}%, 1)`
+        `hsla(${Math.random() * 360}, 100%, 40%, 1)`
       : this.state.pixleColor;
     ctx.fillRect(pos.x, pos.y, pxSize, pxSize);
   };
