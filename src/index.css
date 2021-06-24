@@ -297,10 +297,12 @@ p {
   border-radius: 5px;
   position: absolute;
   top: 372px;
-  left: 0px;
+  left: 2px;
   display: none;
 }
 .downloadAnimation svg {
+  width: 20px;
+  height: 20px;
   position: relative;
   animation-name: record;
   animation-duration: 1.5s;
