@@ -12,7 +12,7 @@ let interval, lastPaint, lastPaintColors, lastPaintGrid, windowTop, windowLeft, 
 let undo = [];
 let redo = [];
 let xPos, yPos, xDif, yDif, drawDir, dirElem, xColor, yColor;
-let renderDate;
+let renderData;
 
 export default class GameOfLife extends Component {
   constructor(props) {
@@ -477,15 +477,14 @@ export default class GameOfLife extends Component {
     return { is: isLive, color: color };
   };
 
-  checkGameRules = i => {
+  checkGameRules = (i, isLive) => {
     let livePixels = 0;
     const [width, height] = [this.state.gridWidth, this.state.gridHeight];
     const firstPixle = Number.isInteger(i / width);
     const lastPixle = Number.isInteger((i + 1) / width);
-    const isLive = renderDate.has(i);
 
     const checkNeighbours = n => {
-      if (n >= 0 && n < width * height && renderDate.has(n)) livePixels++;
+      if (n >= 0 && n < width * height && renderData.has(n)) livePixels++;
     };
 
     if (!lastPixle) checkNeighbours(i + 1);
@@ -497,17 +496,19 @@ export default class GameOfLife extends Component {
     if (!lastPixle) checkNeighbours(i - width + 1);
     if (!firstPixle) checkNeighbours(i - width - 1);
 
-    // Any live cell with fewer than two live neighbours dies, as if by underpopulation
-    if (isLive && livePixels < 2) {
-      return false;
-      // Any live cell with two or three live neighbours lives on to the next generation.
-    } else if (isLive && (livePixels === 2 || livePixels === 3)) {
-      return true;
-      // Any live cell with more than three live neighbours dies, as if by overpopulation.
-    } else if (isLive && livePixels > 3) {
-      return false;
+    if (isLive) {
+      // Any live cell with fewer than two live neighbours dies, as if by underpopulation
+      if (livePixels < 2) {
+        return false;
+        // Any live cell with two or three live neighbours lives on to the next generation.
+      } else if (livePixels === 2 || livePixels === 3) {
+        return true;
+        // Any live cell with more than three live neighbours dies, as if by overpopulation.
+      } else if (livePixels > 3) {
+        return false;
+      }
       // Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
-    } else if (!isLive && livePixels === 3) {
+    } else if (livePixels === 3) {
       return true;
     }
   };
@@ -520,7 +521,7 @@ export default class GameOfLife extends Component {
       if (!this.state.isPaused) {
         this.saveLastPaint();
       }
-      renderDate = new Set(this.getLivePixels()[0]);
+      renderData = new Set(this.getLivePixels()[0]);
       interval = setInterval(() => {
         this.renderLifeDeath();
       }, this.state.speed);
@@ -532,20 +533,39 @@ export default class GameOfLife extends Component {
     const height = this.state.gridHeight;
     const toLive = [];
     const toDeath = [];
-    if (record && !renderDate) renderDate = new Set(this.getLivePixels()[0]);
+    const foundDead = new Set();
 
-    for (let i = 0; i < width * height; i++) this.checkGameRules(i) ? toLive.push(i) : toDeath.push(i);
+    const checkForDead = n => {
+      if (n >= 0 && n < width * height && !renderData.has(n)) foundDead.add(n);
+    };
+
+    if (record && !renderData) renderData = new Set(this.getLivePixels()[0]);
+
+    renderData.forEach(e => {
+      checkForDead(e + 1);
+      checkForDead(e - 1);
+      checkForDead(e + width);
+      checkForDead(e + width + 1);
+      checkForDead(e + width - 1);
+      checkForDead(e - width);
+      checkForDead(e - width + 1);
+      checkForDead(e - width - 1);
+    });
+
+    renderData.forEach(i => (this.checkGameRules(i, true) ? toLive.push(i) : toDeath.push(i)));
+    foundDead.forEach(i => (this.checkGameRules(i, false) ? toLive.push(i) : toDeath.push(i)));
+
 
     for (let i = 0; i < toLive.length; i++) {
       if (this.state.maintainColorPlay) {
         const index = lastPaint.indexOf(toLive[i]);
         index !== -1 ? this.toLive(toLive[i], lastPaintColors[index]) : this.toLive(toLive[i]);
       } else this.toLive(toLive[i]);
-      renderDate.add(toLive[i]);
+      renderData.add(toLive[i]);
     }
 
     for (let i = 0; i < toDeath.length; i++) {
-      renderDate.delete(toDeath[i]);
+      renderData.delete(toDeath[i]);
       this.toDeath(toDeath[i]);
     }
   };
@@ -554,7 +574,7 @@ export default class GameOfLife extends Component {
     if (this.state.isPlaying) {
       clearInterval(interval);
       this.setState({ isPlaying: false, isPaused: true });
-      renderDate = null;
+      renderData = null;
     }
   };
 
@@ -1091,7 +1111,7 @@ export default class GameOfLife extends Component {
   };
 
   windowOpen = boolean => (isWindowOpened = boolean);
-  resetRenderData = () => (renderDate = null);
+  resetRenderData = () => (renderData = null);
   checkColorsBefroRender = () =>
     this.state.pixleColor === this.state.backgroundPixleColor
       ? this.openPopUp('Drawing color and background color should not be the same')
