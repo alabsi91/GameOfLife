@@ -2007,8 +2007,8 @@ export default class GameOfLife extends Component {
           <div
             id='lifeDeathContainer'
             style={{
-              width: this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize) + 'px',
-              height: this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize) + 'px',
+              // width: this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize) + 'px',
+              // height: this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize) + 'px',
               backgroundColor: this.state.betweenPixleColor,
             }}
             onMouseDown={e => {
@@ -2042,33 +2042,6 @@ export default class GameOfLife extends Component {
             }}
           >
             <canvas id='canvas' style={{ backgroundColor: this.state.betweenPixleColor }}></canvas>
-
-            <nav
-              id='horizenLine'
-              style={{
-                height:
-                  this.state.gridHeight % 2 !== 0
-                    ? this.state.pixelSpace * 4 + this.state.pixelSize + 'px'
-                    : this.state.pixelSpace * 2 + 'px',
-                backgroundColor: this.state.SymmetryLinesColor,
-                top: `calc(50%  - ${
-                  this.state.gridHeight % 2 !== 0 ? (this.state.pixelSpace * 4 + this.state.pixelSize) / 2 : this.state.pixelSpace
-                }px)`,
-              }}
-            ></nav>
-            <nav
-              id='verticalLine'
-              style={{
-                width:
-                  this.state.gridWidth % 2 !== 0
-                    ? this.state.pixelSpace * 4 + this.state.pixelSize + 'px'
-                    : this.state.pixelSpace * 2 + 'px',
-                backgroundColor: this.state.SymmetryLinesColor,
-                left: `calc(50%  - ${
-                  this.state.gridWidth % 2 !== 0 ? (this.state.pixelSpace * 4 + this.state.pixelSize) / 2 : this.state.pixelSpace
-                }px)`,
-              }}
-            ></nav>
             <nav id='MouseHorizenLine'></nav>
             <nav id='MouseVerticalLine'></nav>
           </div>
