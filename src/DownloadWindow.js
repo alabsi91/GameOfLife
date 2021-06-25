@@ -50,6 +50,7 @@ export default class DownloadWindow extends Component {
   delay = ms => new Promise(res => setTimeout(res, ms));
 
   captureImgs = async (frmaes, interval, delay, backwards, zip, transparent) => {
+    console.clear();
     const start = Date.now();
     const canvas = document.getElementById('canvas');
     const can = document.getElementById('can');
@@ -88,6 +89,8 @@ export default class DownloadWindow extends Component {
       progressText.innerHTML = ~~((i / frmaes) * 100);
     }
 
+    console.log((Date.now() - start) / 1000 + ' sec to record frames');
+
     if (delay) for (let i = 1; i < delay; i++) imgs.unshift(imgs[0]);
 
     if (backwards) {
@@ -111,7 +114,7 @@ export default class DownloadWindow extends Component {
 
       zip.generateAsync({ type: 'blob' }).then(content => {
         saveAs(content, 'Game-of-life.zip');
-
+        console.log((Date.now() - start) / 1000 + ' sec over all');
         progresContainerProcessing.style.display = 'none';
         progress.style.display = 'none';
         progress.style.removeProperty('background');
@@ -127,8 +130,10 @@ export default class DownloadWindow extends Component {
       progress.style.display = 'none';
       progresContainerProcessing.style.display = 'block';
       renderStatus.innerHTML = 'Processing Images ...';
-
+      const videoStart = Date.now();
       await this.downloadVideo(imgs, interval.toString());
+      console.log((Date.now() - videoStart) / 1000 + ' sec to convert to mp4');
+      console.log((Date.now() - start) / 1000 + ' sec over all');
 
       videoAnimation.style.display = 'none';
       imageAnimation.style.display = 'none';
@@ -140,12 +145,10 @@ export default class DownloadWindow extends Component {
       progressText.innerHTML = 0;
       this.setState({ runnig: false });
       this.toggleDownloadWindow();
-
-      console.log((Date.now() - start) / 1000);
     } else {
       gifAnimation.style.display = 'block';
-      renderStatus.innerHTML = 'Processing gif ...';
-
+      renderStatus.innerHTML = 'Converting to gif ...';
+      const gifStart = Date.now();
       createGIF(
         {
           images: imgs,
@@ -171,7 +174,8 @@ export default class DownloadWindow extends Component {
             this.setState({ runnig: false });
             this.toggleDownloadWindow();
 
-            console.log((Date.now() - start) / 1000);
+            console.log((Date.now() - gifStart) / 1000 + ' sec to convert to gif');
+            console.log((Date.now() - start) / 1000 + ' sec over all');
           } else console.error(obj.error);
         }
       );
