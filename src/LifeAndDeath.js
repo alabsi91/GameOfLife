@@ -366,7 +366,10 @@ export default class GameOfLife extends Component {
   };
 
   changePixelSize = newSize => {
-    if (Number(newSize)) {
+    const width = this.state.gridWidth * (this.state.pixelSpace * 2 + newSize);
+    const height = this.state.gridHeight * (this.state.pixelSpace * 2 + newSize);
+    newSize = width > 10000 || height > 10000 ? this.state.pixelSize : newSize;
+    if (Number(newSize) && this.state.pixelSize !== newSize) {
       newSize = Number(newSize) < 1 ? 1 : Number(newSize);
       const live = this.getLivePixels();
       this.setState({ pixelSize: Number(newSize) }, () => {
@@ -554,7 +557,6 @@ export default class GameOfLife extends Component {
 
     renderData.forEach(i => (this.checkGameRules(i, true) ? toLive.push(i) : toDeath.push(i)));
     foundDead.forEach(i => (this.checkGameRules(i, false) ? toLive.push(i) : toDeath.push(i)));
-
 
     for (let i = 0; i < toLive.length; i++) {
       if (this.state.maintainColorPlay) {
