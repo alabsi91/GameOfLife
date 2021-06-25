@@ -537,9 +537,7 @@ export default class GameOfLife extends Component {
         this.saveLastPaint();
       }
       renderData = new Set(this.getLivePixels()[0]);
-      interval = setInterval(() => {
-        this.renderLifeDeath();
-      }, this.state.speed);
+      interval = setInterval(() => this.renderLifeDeath(), this.state.speed);
     } else this.pauseRender();
   };
 

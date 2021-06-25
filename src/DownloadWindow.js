@@ -91,7 +91,7 @@ export default class DownloadWindow extends Component {
 
     console.log((Date.now() - start) / 1000 + ' sec to record frames');
 
-    if (delay) for (let i = 1; i < delay; i++) imgs.unshift(imgs[0]);
+    if (delay) for (let i = 0; i < delay; i++) imgs.unshift(imgs[0]);
 
     if (backwards) {
       const revArray = [];
