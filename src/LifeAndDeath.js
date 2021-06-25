@@ -226,7 +226,6 @@ export default class GameOfLife extends Component {
     const ctx = canvas.getContext('2d');
     if (margin !== 0) ctx.translate(0.5, 0.5);
 
-    this.clearSym();
     this.drawSym();
 
     ctx.fillStyle = bgColor;
@@ -305,7 +304,7 @@ export default class GameOfLife extends Component {
     ];
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = symColor;
-    
+
     if (width % 2 !== 0) {
       ctx.fillRect(canvas.width / 2 - (pxSize / 2 + margin * 2), 0, margin * 2, canvas.height);
       ctx.fillRect(canvas.width / 2 + pxSize / 2, 0, margin * 2, canvas.height);
@@ -323,25 +322,6 @@ export default class GameOfLife extends Component {
         ctx.fillRect(i, canvas.height / 2 - pxSize / 2 - margin * 2, margin * 2, pxSize + margin * 4);
       }
     } else ctx.fillRect(0, canvas.height / 2 - margin, canvas.width, margin * 2);
-  };
-
-  clearSym = () => {
-    const [canvas, width, height, margin, pxSize, symColor] = [
-      document.getElementById('canvas'),
-      this.state.gridWidth,
-      this.state.gridHeight,
-      this.state.pixelSpace,
-      this.state.pixelSize,
-      this.state.SymmetryLinesColor,
-    ];
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = symColor;
-    width % 2 !== 0
-      ? ctx.clearRect(canvas.width / 2 - (margin * 2 + pxSize / 2), 0, margin * 4 + pxSize, canvas.height)
-      : ctx.clearRect(canvas.width / 2 - margin, 0, margin * 2, canvas.height);
-    height % 2 !== 0
-      ? ctx.clearRect(0, canvas.height / 2 - (margin * 2 + pxSize / 2), canvas.width, margin * 4 + pxSize)
-      : ctx.clearRect(0, canvas.height / 2 - margin, canvas.width, margin * 2);
   };
 
   toLive = (p, color) => {
