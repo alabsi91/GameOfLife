@@ -129,7 +129,7 @@ export default class DownloadWindow extends Component {
       progressText.innerHTML = 0;
       progress.style.display = 'none';
       progresContainerProcessing.style.display = 'block';
-      renderStatus.innerHTML = 'Processing Images ...';
+      renderStatus.innerHTML = `Processing Images ... (${imgs.length}) pngs`;
       const videoStart = Date.now();
       await this.downloadVideo(imgs, interval.toString());
       console.log((Date.now() - videoStart) / 1000 + ' sec to convert to mp4');

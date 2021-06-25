@@ -226,6 +226,7 @@ export default class GameOfLife extends Component {
     const ctx = canvas.getContext('2d');
     if (margin !== 0) ctx.translate(0.5, 0.5);
 
+    this.clearSym();
     this.drawSym();
 
     ctx.fillStyle = bgColor;
@@ -304,12 +305,43 @@ export default class GameOfLife extends Component {
     ];
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = symColor;
+    
+    if (width % 2 !== 0) {
+      ctx.fillRect(canvas.width / 2 - (pxSize / 2 + margin * 2), 0, margin * 2, canvas.height);
+      ctx.fillRect(canvas.width / 2 + pxSize / 2, 0, margin * 2, canvas.height);
+      ctx.fillRect(canvas.width / 2 - (pxSize / 2 + margin * 2), 0, pxSize + margin * 4, margin);
+      for (let i = pxSize + margin; i < canvas.height; i = i + pxSize + margin * 2) {
+        ctx.fillRect(canvas.width / 2 - (pxSize / 2 + margin * 2), i, pxSize + margin * 4, margin * 2);
+      }
+    } else ctx.fillRect(canvas.width / 2 - margin, 0, margin * 2, canvas.height);
+
+    if (height % 2 !== 0) {
+      ctx.fillRect(0, canvas.height / 2 - (pxSize / 2 + margin * 2), canvas.width, margin * 2);
+      ctx.fillRect(0, canvas.height / 2 + pxSize / 2, canvas.width, margin * 2);
+      ctx.fillRect(0, canvas.height / 2 - pxSize / 2 - margin * 2, margin, pxSize + margin * 4);
+      for (let i = pxSize + margin; i < canvas.width; i = i + pxSize + margin * 2) {
+        ctx.fillRect(i, canvas.height / 2 - pxSize / 2 - margin * 2, margin * 2, pxSize + margin * 4);
+      }
+    } else ctx.fillRect(0, canvas.height / 2 - margin, canvas.width, margin * 2);
+  };
+
+  clearSym = () => {
+    const [canvas, width, height, margin, pxSize, symColor] = [
+      document.getElementById('canvas'),
+      this.state.gridWidth,
+      this.state.gridHeight,
+      this.state.pixelSpace,
+      this.state.pixelSize,
+      this.state.SymmetryLinesColor,
+    ];
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = symColor;
     width % 2 !== 0
-      ? ctx.fillRect(canvas.width / 2 - (margin * 2 + pxSize / 2), 0, margin * 4 + pxSize, canvas.height)
-      : ctx.fillRect(canvas.width / 2 - margin, 0, margin * 2, canvas.height);
+      ? ctx.clearRect(canvas.width / 2 - (margin * 2 + pxSize / 2), 0, margin * 4 + pxSize, canvas.height)
+      : ctx.clearRect(canvas.width / 2 - margin, 0, margin * 2, canvas.height);
     height % 2 !== 0
-      ? ctx.fillRect(0, canvas.height / 2 - (margin * 2 + pxSize / 2), canvas.width, margin * 4 + pxSize)
-      : ctx.fillRect(0, canvas.height / 2 - margin, canvas.width, margin * 2);
+      ? ctx.clearRect(0, canvas.height / 2 - (margin * 2 + pxSize / 2), canvas.width, margin * 4 + pxSize)
+      : ctx.clearRect(0, canvas.height / 2 - margin, canvas.width, margin * 2);
   };
 
   toLive = (p, color) => {
@@ -471,10 +503,10 @@ export default class GameOfLife extends Component {
     const ctx = canvas.getContext('2d');
     const findRow = ~~(p / width);
     const findColumn = p - findRow * width;
-    const x = findColumn * (pxSize + margin * 2) + margin;
-    const y = findRow * (pxSize + margin * 2) + margin;
+    const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
+    const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
 
-    const data = ctx.getImageData(x + pxSize / 2, y + pxSize / 2, 1, 1).data;
+    const data = ctx.getImageData(x, y, 1, 1).data;
     const color = this.RGBToHex(data[0], data[1], data[2]);
     const isLive = color !== bgColor;
     return { is: isLive, color: color };
@@ -1183,7 +1215,14 @@ export default class GameOfLife extends Component {
             </svg>
           </button>
 
-          <button className='buttons' onClick={this.drawCanvas} title='Reset'>
+          <button
+            className='buttons'
+            onClick={() => {
+              this.pauseRender();
+              this.drawCanvas();
+            }}
+            title='Reset'
+          >
             <svg
               xmlns='http://www.w3.org/2000/svg'
               enableBackground='new 0 0 24 24'
@@ -1628,12 +1667,7 @@ export default class GameOfLife extends Component {
             type='color'
             title='Backgorund Pixel Color'
             value={this.state.backgroundPixleColor}
-            onChange={e => {
-              this.changePixelColor(e.target.value);
-
-              // const pixels = document.querySelectorAll('#lifeDeathContainer > div:not([data-live=true])');
-              // pixels.forEach(el => (el.style.backgroundColor = e.target.value));
-            }}
+            onChange={e => this.changePixelColor(e.target.value)}
           ></input>
           <p className='controlLabel'>Background</p>
           <input
