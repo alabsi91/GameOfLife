@@ -857,18 +857,17 @@ export default class GameOfLife extends Component {
 
   paintBuc = i => {
     if (this.state.paintBuc) {
-      const start = Date.now();
-      const [canvas, width, height, margin, bgColor, pxSize] = [
+      const [canvas, width, height, margin, pxSize] = [
         document.getElementById('canvas'),
         this.state.gridWidth,
         this.state.gridHeight,
         this.state.pixelSpace,
-        this.state.backgroundPixleColor,
         this.state.pixelSize,
       ];
       const ctx = canvas.getContext('2d');
       const ctxData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
+      // get color of square from canvas data
       const checkLive = p => {
         const findRow = ~~(p / width);
         const findColumn = p - findRow * width;
@@ -876,24 +875,17 @@ export default class GameOfLife extends Component {
         const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
         const red = y * (canvas.width * 4) + x * 4;
         const color = this.RGBToHex(ctxData[red], ctxData[red + 1], ctxData[red + 2]);
-        const isLive = color !== bgColor;
-        return { is: isLive, color: color };
-      };
-      const correntColor = checkLive(i).color;
-      const sameColor = correntColor !== this.state.pixleColor;
-
-      const isEmpty = d => {
-        if (d >= 0 && d < width * height) {
-          const check = checkLive(d);
-          if (this.state.eraser && check.is && check.color === correntColor) {
-            return true;
-          } else if (!this.state.eraser && check.color === correntColor && sameColor) {
-            return true;
-          } else return false;
-        } else return false;
+        return color;
       };
 
+      // get the color that will be filled
+      const correntColor = checkLive(i);
+
+      // save square that has been fill
       const drawn = new Set([]);
+
+      const matchColor = p => checkLive(p) === correntColor && !drawn.has(p);
+
       const toDraw = x => {
         if (this.state.eraser) {
           this.toDeath(x);
@@ -902,35 +894,133 @@ export default class GameOfLife extends Component {
         }
         drawn.add(x);
       };
-      const delay = ms => new Promise(res => setTimeout(res, ms));
-      const checkAround = async x => {
-        await delay(1);
-        const next = x + 1;
-        const previous = x - 1;
-        const up = x - width;
-        const down = x + width;
-        if (isEmpty(next) && !Number.isInteger((x + 1) / width) && !drawn.has(next)) {
-          toDraw(next);
-          checkAround(next);
+
+      const pixelStack = [i];
+
+      // don't fill if the filling color and the color that will be filled with are the same
+      const notSameColor = correntColor !== this.state.pixleColor;
+
+      while (pixelStack.length > 0 && notSameColor) {
+        let pixelPos, reachLeft, reachRight;
+        pixelPos = pixelStack.pop();
+
+        // travel up withuot filling
+        while (pixelPos >= 0 && matchColor(pixelPos)) pixelPos -= width;
+
+        pixelPos += width;
+        reachLeft = false;
+        reachRight = false;
+
+        // travel down and fill
+        while (~~(pixelPos / width) !== height && matchColor(pixelPos)) {
+          toDraw(pixelPos);
+
+          // look left
+          if (!Number.isInteger(pixelPos / width) && pixelPos - 1 >= 0) {
+            if (matchColor(pixelPos - 1)) {
+              if (!reachLeft) {
+                pixelStack.push(pixelPos - 1);
+                reachLeft = true;
+              }
+            } else if (reachLeft) {
+              reachLeft = false;
+            }
+          }
+
+          // look right
+          if (!Number.isInteger((pixelPos + 1) / width) && pixelPos + 1 >= 0) {
+            if (matchColor(pixelPos + 1)) {
+              if (!reachRight) {
+                pixelStack.push(pixelPos + 1);
+                reachRight = true;
+              }
+            } else if (reachRight) {
+              reachRight = false;
+            }
+          }
+
+          pixelPos += width;
         }
-        if (isEmpty(previous) && !Number.isInteger(x / width) && !drawn.has(previous)) {
-          toDraw(previous);
-          checkAround(previous);
-        }
-        if (isEmpty(up) && ~~(x / width) !== 0 && !drawn.has(up)) {
-          toDraw(up);
-          checkAround(up);
-        }
-        if (isEmpty(down) && ~~(x / width) !== height && !drawn.has(down)) {
-          toDraw(down);
-          checkAround(down);
-        }
-        if (x === 0) console.log((Date.now() - start) / 1000);
-      };
-      toDraw(i);
-      checkAround(i);
+      }
     }
   };
+
+  // paintBuc = i => {
+  //   if (this.state.paintBuc) {
+  //     const start = Date.now();
+  //     const [canvas, width, height, margin, bgColor, pxSize] = [
+  //       document.getElementById('canvas'),
+  //       this.state.gridWidth,
+  //       this.state.gridHeight,
+  //       this.state.pixelSpace,
+  //       this.state.backgroundPixleColor,
+  //       this.state.pixelSize,
+  //     ];
+  //     const ctx = canvas.getContext('2d');
+  //     const ctxData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+  //     const checkLive = p => {
+  //       const findRow = ~~(p / width);
+  //       const findColumn = p - findRow * width;
+  //       const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
+  //       const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
+  //       const red = y * (canvas.width * 4) + x * 4;
+  //       const color = this.RGBToHex(ctxData[red], ctxData[red + 1], ctxData[red + 2]);
+  //       const isLive = color !== bgColor;
+  //       return { is: isLive, color: color };
+  //     };
+  //     const correntColor = checkLive(i).color;
+  //     const sameColor = correntColor !== this.state.pixleColor;
+
+  //     const isEmpty = d => {
+  //       if (d >= 0 && d < width * height) {
+  //         const check = checkLive(d);
+  //         if (this.state.eraser && check.is && check.color === correntColor) {
+  //           return true;
+  //         } else if (!this.state.eraser && check.color === correntColor && sameColor) {
+  //           return true;
+  //         } else return false;
+  //       } else return false;
+  //     };
+
+  //     const drawn = new Set([]);
+  //     const toDraw = x => {
+  //       if (this.state.eraser) {
+  //         this.toDeath(x);
+  //       } else {
+  //         this.toLive(x);
+  //       }
+  //       drawn.add(x);
+  //     };
+  //     const delay = ms => new Promise(res => setTimeout(res, ms));
+  //     const checkAround = async x => {
+  //       await delay(1);
+  //       const next = x + 1;
+  //       const previous = x - 1;
+  //       const up = x - width;
+  //       const down = x + width;
+  //       if (isEmpty(next) && !Number.isInteger((x + 1) / width) && !drawn.has(next)) {
+  //         toDraw(next);
+  //         checkAround(next);
+  //       }
+  //       if (isEmpty(previous) && !Number.isInteger(x / width) && !drawn.has(previous)) {
+  //         toDraw(previous);
+  //         checkAround(previous);
+  //       }
+  //       if (isEmpty(up) && ~~(x / width) !== 0 && !drawn.has(up)) {
+  //         toDraw(up);
+  //         checkAround(up);
+  //       }
+  //       if (isEmpty(down) && ~~(x / width) !== height && !drawn.has(down)) {
+  //         toDraw(down);
+  //         checkAround(down);
+  //       }
+  //       if (x === 0) console.log((Date.now() - start) / 1000);
+  //     };
+  //     toDraw(i);
+  //     checkAround(i);
+  //   }
+  // };
 
   exportData = () => {
     const myData = localStorage.getItem('saved');
