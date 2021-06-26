@@ -1970,6 +1970,7 @@ export default class GameOfLife extends Component {
           resetRenderData={this.resetRenderData}
           checkColor={this.checkColorsBefroRender}
           popUp={this.openPopUp}
+          windowOpen={this.windowOpen}
         ></DownloadWindow>
 
         <div id='saveWindow'>

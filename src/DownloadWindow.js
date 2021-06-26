@@ -29,6 +29,7 @@ export default class DownloadWindow extends Component {
           winEl.style.display = 'none';
           blured.style.display = 'none';
         }
+        this.props.windowOpen(false);
       });
     } else {
       winEl.style.display = 'initial';
@@ -37,6 +38,7 @@ export default class DownloadWindow extends Component {
         winEl.style.transform = `scale(${s})`;
         blured.style.opacity = s;
       });
+      this.props.windowOpen(true);
     }
   };
 
