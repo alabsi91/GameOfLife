@@ -623,8 +623,8 @@ export default class GameOfLife extends Component {
     const container = document.getElementById('lifeDeathContainer');
     const top = container.getBoundingClientRect().top;
     const left = container.getBoundingClientRect().left;
-    document.getElementById('MouseHorizenLine').style.top = `${l.pageY - top - window.scrollY}px`;
-    document.getElementById('MouseVerticalLine').style.left = `${l.pageX - left - window.scrollX}px`;
+    document.getElementById('MouseHorizenLine').style.top = `${l.pageY - top - window.scrollY - 1}px`;
+    document.getElementById('MouseVerticalLine').style.left = `${l.pageX - left - window.scrollX - 1}px`;
   };
 
   stickyGrapHandle = (l, el) => {
