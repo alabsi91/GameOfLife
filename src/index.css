@@ -840,6 +840,16 @@ p {
   display: none;
   border: solid 0.5px black;
 }
+#eraserTrack {
+  position: absolute;
+  display: none;
+  filter: drop-shadow(black 1px 0px 1px);
+}
+#bucketTrack {
+  position: absolute;
+  display: none;
+  filter: drop-shadow(black 1px 0px 1px);
+}
 .controlPanel {
   position: absolute;
   top: 15px;
