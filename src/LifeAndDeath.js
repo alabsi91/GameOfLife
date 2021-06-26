@@ -856,6 +856,7 @@ export default class GameOfLife extends Component {
   };
 
   paintBuc = i => {
+    // credit to http://www.williammalone.com/articles/html5-canvas-javascript-paint-bucket-tool/
     if (this.state.paintBuc) {
       const [canvas, width, height, margin, pxSize] = [
         document.getElementById('canvas'),
@@ -878,7 +879,7 @@ export default class GameOfLife extends Component {
         return color;
       };
 
-      // get the color that will be filled
+      // get the color that will be filled with
       const correntColor = checkLive(i);
 
       // save square that has been fill
@@ -887,20 +888,15 @@ export default class GameOfLife extends Component {
       const matchColor = p => checkLive(p) === correntColor && !drawn.has(p);
 
       const toDraw = x => {
-        if (this.state.eraser) {
-          this.toDeath(x);
-        } else {
-          this.toLive(x);
-        }
+        this.state.eraser ? this.toDeath(x) : this.toLive(x);
         drawn.add(x);
       };
 
+      // loop will search for empty pixels and add them to pixelStack to be filled later
       const pixelStack = [i];
 
-      // don't fill if the filling color and the color that will be filled with are the same
-      const notSameColor = correntColor !== this.state.pixleColor;
-
-      while (pixelStack.length > 0 && notSameColor) {
+      // every pos in pixelStack will be filled with color
+      while (pixelStack.length > 0) {
         let pixelPos, reachLeft, reachRight;
         pixelPos = pixelStack.pop();
 
@@ -915,7 +911,7 @@ export default class GameOfLife extends Component {
         while (~~(pixelPos / width) !== height && matchColor(pixelPos)) {
           toDraw(pixelPos);
 
-          // look left
+          // look left for empty pixels to be filled the nexet loop
           if (!Number.isInteger(pixelPos / width) && pixelPos - 1 >= 0) {
             if (matchColor(pixelPos - 1)) {
               if (!reachLeft) {
@@ -927,7 +923,7 @@ export default class GameOfLife extends Component {
             }
           }
 
-          // look right
+          // look right for empty pixels to be filled the nexet loop
           if (!Number.isInteger((pixelPos + 1) / width) && pixelPos + 1 >= 0) {
             if (matchColor(pixelPos + 1)) {
               if (!reachRight) {
