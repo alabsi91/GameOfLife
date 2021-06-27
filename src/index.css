@@ -906,9 +906,10 @@ p {
   color: #dddddd;
   background-color: #454545;
   font-size: 14px;
+  transition: all 100ms linear;
 }
 .inputNumber:focus {
-  transform: scale(1.3);
+  transform: scale(1.2);
   outline: none;
   box-shadow: 0px 0px 8px 1px #00000059;
   width: 100%;
@@ -997,6 +998,7 @@ input[type='color']::-webkit-color-swatch {
   color: #dddddd;
   background-color: #454545;
   direction: rtl;
+  transition: all 100ms linear;
 }
 #rangeInput::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -1008,7 +1010,7 @@ input[type='color']::-webkit-color-swatch {
   border-bottom: 10px solid #d7d7d7;
   margin-top: 10px;
 }
-#rangeInput:focus {
+#rangeInput:active {
   transform: scale(1.3);
   width: 100%;
 }
