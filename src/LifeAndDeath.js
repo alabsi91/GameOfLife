@@ -1280,7 +1280,7 @@ export default class GameOfLife extends Component {
             className='buttons'
             onClick={() => {
               this.pauseRender();
-              this.drawCanvas();
+              this.drawCanvas(true);
             }}
             title='Reset'
           >
