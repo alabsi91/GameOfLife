@@ -1648,7 +1648,7 @@ export default class GameOfLife extends Component {
             title='Between squares space in px'
             min='0'
             max='10'
-            step='0.5'
+            step='1'
             value={this.state.pixelSpace * 2}
             onChange={e => this.changeLinesSize(e.target.value)}
             onClick={e => e.target.select()}
