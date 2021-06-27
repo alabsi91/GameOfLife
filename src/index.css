@@ -4,8 +4,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-#canvas {
-  background-color: #ff0000;
+#Hiddencanvas {
+  position: absolute;
+  left: 0px;
+  top: 0px;
 }
 #root {
   text-align: center;

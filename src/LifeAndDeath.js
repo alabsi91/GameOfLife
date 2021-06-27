@@ -296,7 +296,7 @@ export default class GameOfLife extends Component {
 
   drawSym = () => {
     const [canvas, width, height, margin, pxSize, symColor] = [
-      document.getElementById('canvas'),
+      document.getElementById('Hiddencanvas'),
       this.state.gridWidth,
       this.state.gridHeight,
       this.state.pixelSpace,
@@ -425,6 +425,7 @@ export default class GameOfLife extends Component {
   };
 
   changeLinesSize = newSize => {
+    newSize = Number(newSize) > 10 ? 10 : Number(newSize);
     if (Number(newSize) !== null) {
       const live = this.getLivePixels();
       this.setState({ pixelSpace: Number(newSize / 2) }, () => {
@@ -1740,7 +1741,7 @@ export default class GameOfLife extends Component {
             type='color'
             title='Backgorund Pixel Color'
             value={this.state.backgroundPixleColor}
-            onChange={e => this.changePixelColor(e.target.value)}
+            onInput={e => this.changePixelColor(e.target.value)}
           ></input>
           <p className='controlLabel'>Background</p>
           <input
@@ -2138,7 +2139,12 @@ export default class GameOfLife extends Component {
               }
             }}
           >
-            <canvas id='canvas' style={{ backgroundColor: this.state.betweenPixleColor }}></canvas>
+            <canvas id='canvas'></canvas>
+            <canvas
+              id='Hiddencanvas'
+              width={this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize)}
+              height={this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize)}
+            ></canvas>
             <nav id='MouseHorizenLine'></nav>
             <nav id='MouseVerticalLine'></nav>
             <div id='eraserTrack' style={{ display: this.state.eraser && this.state.mouseInside ? 'block' : 'none' }}>
