@@ -16,6 +16,23 @@ export default class DownloadWindow extends Component {
     });
   }
 
+  mergeCanvses = transparent => {
+    const main = document.getElementById('canvas');
+    const hidden = document.getElementById('Hiddencanvas');
+    const temp = document.getElementById('can');
+    const ctxTemp = temp.getContext('2d');
+
+    temp.width = main.width;
+    temp.height = main.height;
+
+    if (!transparent) {
+      ctxTemp.fillStyle = this.props.bg;
+      ctxTemp.fillRect(0, 0, temp.width, temp.height);
+    }
+    ctxTemp.drawImage(main, 0, 0);
+    ctxTemp.drawImage(hidden, 0, 0);
+  };
+
   toggleDownloadWindow = () => {
     const winEl = document.getElementById('downloadWindow');
     const blured = document.getElementById('blured');
@@ -54,8 +71,7 @@ export default class DownloadWindow extends Component {
   captureImgs = async (frmaes, interval, delay, backwards, zip, transparent) => {
     console.clear();
     const start = Date.now();
-    const canvas = document.getElementById('canvas');
-    const can = document.getElementById('can');
+    const canvas = document.getElementById('can');
 
     const gifAnimation = document.getElementById('gifAnimation');
     const imageAnimation = document.getElementById('imageAnimation');
@@ -77,11 +93,15 @@ export default class DownloadWindow extends Component {
       renderStatus.innerHTML = 'Recording frame: ' + i;
 
       if (zip && transparent) {
-        await this.props.getTransparentCanvas();
-        can.toBlob(b => imgs.push(b), 'image/png');
-      } else if (zip) {
+        this.mergeCanvses(true);
         canvas.toBlob(b => imgs.push(b), 'image/png');
-      } else imgs.push(canvas.toDataURL('image/png'));
+      } else if (zip) {
+        this.mergeCanvses(false);
+        canvas.toBlob(b => imgs.push(b), 'image/png');
+      } else {
+        this.mergeCanvses(false);
+        imgs.push(canvas.toDataURL('image/png'));
+      }
 
       this.props.renderLifeDeath(true);
       await this.delay(1);
@@ -184,20 +204,11 @@ export default class DownloadWindow extends Component {
     }
   };
 
-  downloadImg = async transparent => {
+  downloadImg = transparent => {
     this.props.pauseRender();
-    const canvas = document.getElementById('canvas');
-    const can = document.getElementById('can');
-    if (transparent) {
-      await this.props.getTransparentCanvas();
-      can.toBlob(e => {
-        saveAs(e, 'Game of life ' + Date.now());
-      }, 'image/png');
-    } else {
-      canvas.toBlob(e => {
-        saveAs(e, 'Game of life ' + Date.now());
-      }, 'image/png');
-    }
+    const canvas = document.getElementById('can');
+    this.mergeCanvses(transparent);
+    canvas.toBlob(e => saveAs(e, 'Game of life ' + Date.now()), 'image/png');
   };
 
   downloadVideo = async (imgs, fps) => {
@@ -271,7 +282,7 @@ export default class DownloadWindow extends Component {
     const transparentZip = document.getElementById('transparentZip').checked ? true : false;
     this.props.resetRenderData();
     if (isPNG) {
-      await this.downloadImg(transparent);
+      this.downloadImg(transparent);
       this.toggleDownloadWindow();
     } else if (this.props.checkColor()) {
       if (isZip && frames > 0 && delay >= 0) {

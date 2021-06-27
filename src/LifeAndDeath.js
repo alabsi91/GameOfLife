@@ -11,8 +11,7 @@ import { requestNum } from 'request-animation-number';
 let interval, lastPaint, lastPaintColors, lastPaintGrid, windowTop, windowLeft, isWindowOpened, panelsPos, extractedData;
 let undo = [];
 let redo = [];
-let xPos, yPos, xDif, yDif, drawDir, dirElem, xColor, yColor;
-let renderData;
+let xPos, yPos, xDif, yDif, drawDir, dirElem, xColor, yColor, renderData;
 
 export default class GameOfLife extends Component {
   constructor(props) {
@@ -48,6 +47,7 @@ export default class GameOfLife extends Component {
 
   componentDidMount() {
     this.appendCanvas();
+
     if (localStorage.getItem('lastPaint')) {
       const getLastPaint = JSON.parse(localStorage.getItem('lastPaint'));
       const getLastPaintColros = JSON.parse(localStorage.getItem('lastPaintColors'));
@@ -170,7 +170,7 @@ export default class GameOfLife extends Component {
   };
 
   applyPattren = (patren, colors, pWidth, x, y) => {
-    this.drawCanvas();
+    this.drawCanvas(true);
     const dif = this.state.gridWidth - pWidth;
     const moveX = x ? ~~(this.state.gridWidth / 2) - x : 0;
     const moveY = y ? ~~this.state.gridWidth * (~~(this.state.gridHeight / 2) - y) : 0;
@@ -212,30 +212,22 @@ export default class GameOfLife extends Component {
     }
   };
 
-  drawCanvas = () => {
+  drawCanvas = dontTranslate => {
     const canvas = document.getElementById('canvas');
-    const [width, height, margin, pxSize, bgColor] = [
+    const [width, height, margin, pxSize] = [
       this.state.gridWidth,
       this.state.gridHeight,
       this.state.pixelSpace,
       this.state.pixelSize,
-      this.state.backgroundPixleColor,
     ];
 
     canvas.width = width * (margin * 2 + pxSize);
     canvas.height = height * (margin * 2 + pxSize);
     const ctx = canvas.getContext('2d');
+
     if (margin !== 0) ctx.translate(0.5, 0.5);
 
-    this.drawSym();
-
-    ctx.fillStyle = bgColor;
-    for (let x = margin; x < canvas.width; x = x + (margin * 2 + pxSize)) {
-      ctx.fillRect(x, margin, pxSize, pxSize);
-      for (let y = margin * 3 + pxSize; y < canvas.height; y = y + (margin * 2 + pxSize)) {
-        ctx.fillRect(x, y, pxSize, pxSize);
-      }
-    }
+    this.drawGridLines(dontTranslate);
   };
 
   appendCanvas = () => {
@@ -304,6 +296,7 @@ export default class GameOfLife extends Component {
       this.state.SymmetryLinesColor,
     ];
     const ctx = canvas.getContext('2d');
+
     ctx.fillStyle = symColor;
 
     if (width % 2 !== 0) {
@@ -325,6 +318,30 @@ export default class GameOfLife extends Component {
     } else ctx.fillRect(0, canvas.height / 2 - margin, canvas.width, margin * 2);
   };
 
+  drawGridLines = dontTranslate => {
+    const [canvas, width, height, margin, pxSize, linesColor] = [
+      document.getElementById('Hiddencanvas'),
+      this.state.gridWidth,
+      this.state.gridHeight,
+      this.state.pixelSpace,
+      this.state.pixelSize,
+      this.state.betweenPixleColor,
+    ];
+    const ctx = canvas.getContext('2d');
+    if (margin !== 0 && !dontTranslate) ctx.translate(0.5, 0.5);
+
+    ctx.fillStyle = linesColor;
+    for (let i = 0; i <= width + 1; i++) {
+      const x = i * (pxSize + margin * 2) - margin;
+      ctx.fillRect(x, 0, margin * 2, canvas.height);
+    }
+    for (let i = 0; i <= height + 1; i++) {
+      const y = i * (pxSize + margin * 2) - margin;
+      ctx.fillRect(0, y, canvas.width, margin * 2);
+    }
+    this.drawSym();
+  };
+
   toLive = (p, color) => {
     const [canvas, pxSize] = [document.getElementById('canvas'), this.state.pixelSize];
     const ctx = canvas.getContext('2d');
@@ -343,7 +360,7 @@ export default class GameOfLife extends Component {
     const ctx = canvas.getContext('2d');
     const pos = this.getPos(p);
     ctx.fillStyle = this.state.backgroundPixleColor;
-    ctx.fillRect(pos.x, pos.y, pxSize, pxSize);
+    ctx.clearRect(pos.x, pos.y, pxSize, pxSize);
   };
 
   getPos = p => {
@@ -355,29 +372,6 @@ export default class GameOfLife extends Component {
     return { x: x, y: y };
   };
 
-  changePixelColor = newColor => {
-    const canvas = document.getElementById('canvas');
-    const [margin, pxSize, bgColor] = [this.state.pixelSpace, this.state.pixelSize, this.state.backgroundPixleColor];
-
-    const ctx = canvas.getContext('2d');
-
-    const checkLive = (x, y) => {
-      const data = ctx.getImageData(x + pxSize / 2, y + pxSize / 2, 1, 1).data;
-      const isLive = this.RGBToHex(data[0], data[1], data[2]) !== bgColor;
-      return isLive;
-    };
-
-    ctx.fillStyle = newColor;
-    for (let x = margin; x < canvas.width; x = x + (margin * 2 + pxSize)) {
-      if (!checkLive(x, margin)) ctx.fillRect(x, margin, pxSize, pxSize);
-      for (let y = margin * 3 + pxSize; y < canvas.height; y = y + (margin * 2 + pxSize)) {
-        if (!checkLive(x, y)) ctx.fillRect(x, y, pxSize, pxSize);
-      }
-    }
-    this.setState({ backgroundPixleColor: newColor });
-    localStorage.setItem('backgroundPixleColor', newColor);
-  };
-
   changePixelSize = newSize => {
     const width = this.state.gridWidth * (this.state.pixelSpace * 2 + newSize);
     const height = this.state.gridHeight * (this.state.pixelSpace * 2 + newSize);
@@ -387,9 +381,7 @@ export default class GameOfLife extends Component {
       const live = this.getLivePixels();
       this.setState({ pixelSize: Number(newSize) }, () => {
         this.drawCanvas();
-        live[0].forEach((e, i) => {
-          this.toLive(e, live[1][i]);
-        });
+        live[0].forEach((e, i) => this.toLive(e, live[1][i]));
         localStorage.setItem('pixelSize', Number(newSize));
       });
     }
@@ -430,21 +422,18 @@ export default class GameOfLife extends Component {
       const live = this.getLivePixels();
       this.setState({ pixelSpace: Number(newSize / 2) }, () => {
         this.drawCanvas();
-        live[0].forEach((e, i) => {
-          this.toLive(e, live[1][i]);
-        });
+        live[0].forEach((e, i) => this.toLive(e, live[1][i]));
         localStorage.setItem('pixelSpace', Number(newSize / 2));
       });
     }
   };
 
   getLivePixels = () => {
-    const [canvas, width, height, margin, bgColor, pxSize] = [
+    const [canvas, width, height, margin, pxSize] = [
       document.getElementById('canvas'),
       this.state.gridWidth,
       this.state.gridHeight,
       this.state.pixelSpace,
-      this.state.backgroundPixleColor,
       this.state.pixelSize,
     ];
 
@@ -459,7 +448,7 @@ export default class GameOfLife extends Component {
 
       const red = y * (canvas.width * 4) + x * 4;
       const color = this.RGBToHex(ctxData[red], ctxData[red + 1], ctxData[red + 2]);
-      const isLive = color !== bgColor;
+      const isLive = ctxData[red + 3] / 255 !== 0;
       return { is: isLive, color: color };
     };
 
@@ -475,11 +464,10 @@ export default class GameOfLife extends Component {
   };
 
   checkLive = p => {
-    const [canvas, width, margin, bgColor, pxSize] = [
+    const [canvas, width, margin, pxSize] = [
       document.getElementById('canvas'),
       this.state.gridWidth,
       this.state.pixelSpace,
-      this.state.backgroundPixleColor,
       this.state.pixelSize,
     ];
     const ctx = canvas.getContext('2d');
@@ -490,7 +478,7 @@ export default class GameOfLife extends Component {
 
     const data = ctx.getImageData(x, y, 1, 1).data;
     const color = this.RGBToHex(data[0], data[1], data[2]);
-    const isLive = color !== bgColor;
+    const isLive = data[3] / 255 !== 0;
     return { is: isLive, color: color };
   };
 
@@ -682,8 +670,7 @@ export default class GameOfLife extends Component {
 
   copyToClipBoard = () => {
     this.pauseRender();
-    const canvas = document.getElementById('canvas');
-    canvas.toBlob(e => {
+    this.mergeCanvses(false).toBlob(e => {
       navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
         if (result.state === 'granted' || result.state === 'prompt') {
           // eslint-disable-next-line no-undef
@@ -760,7 +747,6 @@ export default class GameOfLife extends Component {
   saveDrawing = () => {
     this.pauseRender();
     const buttons = document.querySelectorAll('#saveCancleContainer button');
-    const canvas = document.getElementById('canvas');
     const lives = this.getLivePixels();
     buttons.forEach(e => (e.disabled = true));
     const newSave = {
@@ -776,7 +762,7 @@ export default class GameOfLife extends Component {
         this.state.backgroundPixleColor,
       ],
     };
-    const dataURL = canvas.toDataURL('image/png');
+    const dataURL = this.mergeCanvses(false).toDataURL('image/png');
     newSave.drawngImg = dataURL;
     if (localStorage.getItem('saved')) {
       const saved = JSON.parse(localStorage.getItem('saved'));
@@ -885,7 +871,9 @@ export default class GameOfLife extends Component {
         const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
         const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
         const red = y * (canvas.width * 4) + x * 4;
-        const color = this.RGBToHex(ctxData[red], ctxData[red + 1], ctxData[red + 2]);
+        const transparent = ctxData[red + 3] / 255 === 0;
+        let color = this.RGBToHex(ctxData[red], ctxData[red + 1], ctxData[red + 2]) ;
+        color = transparent ? color + '00' : color
         return color;
       };
 
@@ -1106,7 +1094,7 @@ export default class GameOfLife extends Component {
     let row = lives[0];
     let colors = lives[1];
 
-    this.drawCanvas();
+    this.drawCanvas(true);
     if (dir === 'up') {
       row.forEach((e, x) => this.toLive(e - width, colors[x]));
     } else if (dir === 'down') {
@@ -1189,25 +1177,6 @@ export default class GameOfLife extends Component {
     return '#' + r + g + b;
   };
 
-  getTransparentCanvas = () => {
-    const [canvas, can, margin, pxSize] = [
-      document.getElementById('canvas'),
-      document.getElementById('can'),
-      this.state.pixelSpace,
-      this.state.pixelSize,
-    ];
-    const lives = this.getLivePixels();
-    can.width = canvas.width;
-    can.height = canvas.height;
-    const ctx = can.getContext('2d');
-    if (margin !== 0) ctx.translate(0.5, 0.5);
-    lives[0].forEach((e, i) => {
-      const pos = this.getPos(e);
-      ctx.fillStyle = lives[1][i];
-      ctx.fillRect(pos.x, pos.y, pxSize, pxSize);
-    });
-  };
-
   saveLastPaint = () => {
     const lives = this.getLivePixels();
     lastPaint = lives[0];
@@ -1218,9 +1187,27 @@ export default class GameOfLife extends Component {
     localStorage.setItem('lastPaintGrid', JSON.stringify(lastPaintGrid));
   };
 
+  mergeCanvses = transparent => {
+    const main = document.getElementById('canvas');
+    const hidden = document.getElementById('Hiddencanvas');
+    const temp = document.getElementById('can');
+    const ctxTemp = temp.getContext('2d');
+
+    temp.width = main.width;
+    temp.height = main.height;
+
+    if (!transparent) {
+      ctxTemp.fillStyle = this.state.backgroundPixleColor;
+      ctxTemp.fillRect(0, 0, temp.width, temp.height);
+    }
+    ctxTemp.drawImage(main, 0, 0);
+    ctxTemp.drawImage(hidden, 0, 0);
+    return temp;
+  };
+
   windowOpen = boolean => (isWindowOpened = boolean);
   resetRenderData = () => (renderData = null);
-  checkColorsBefroRender = () =>
+  checkColorsBeforeRender = () =>
     this.state.pixleColor === this.state.backgroundPixleColor
       ? this.openPopUp('Drawing color and background color should not be the same')
       : true;
@@ -1741,7 +1728,10 @@ export default class GameOfLife extends Component {
             type='color'
             title='Backgorund Pixel Color'
             value={this.state.backgroundPixleColor}
-            onInput={e => this.changePixelColor(e.target.value)}
+            onInput={e => {
+              this.setState({ backgroundPixleColor: e.target.value });
+              localStorage.setItem('backgroundPixleColor', e.target.value);
+            }}
           ></input>
           <p className='controlLabel'>Background</p>
           <input
@@ -1750,7 +1740,9 @@ export default class GameOfLife extends Component {
             title='Between Pixels Color'
             value={this.state.betweenPixleColor}
             onChange={e => {
-              this.setState({ betweenPixleColor: e.target.value });
+              this.setState({ betweenPixleColor: e.target.value }, () => {
+                this.drawGridLines(true);
+              });
               localStorage.setItem('betweenPixleColor', e.target.value);
             }}
           ></input>
@@ -1976,9 +1968,9 @@ export default class GameOfLife extends Component {
           gridHeight={this.state.gridHeight}
           pixelSize={this.state.pixelSize}
           pixelSpace={this.state.pixelSpace}
-          getTransparentCanvas={this.getTransparentCanvas}
+          bg={this.state.backgroundPixleColor}
           resetRenderData={this.resetRenderData}
-          checkColor={this.checkColorsBefroRender}
+          checkColor={this.checkColorsBeforeRender}
           popUp={this.openPopUp}
           windowOpen={this.windowOpen}
         ></DownloadWindow>
@@ -2103,11 +2095,6 @@ export default class GameOfLife extends Component {
           </div>
           <div
             id='lifeDeathContainer'
-            style={{
-              // width: this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize) + 'px',
-              // height: this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize) + 'px',
-              backgroundColor: this.state.betweenPixleColor,
-            }}
             onMouseDown={e => {
               if (!this.state.isPlaying) this.setState({ drwaMode: true });
               document.querySelectorAll('#controlPanel > *').forEach(e => e.blur());
@@ -2139,7 +2126,12 @@ export default class GameOfLife extends Component {
               }
             }}
           >
-            <canvas id='canvas'></canvas>
+            <canvas
+              id='canvas'
+              style={{
+                backgroundColor: this.state.backgroundPixleColor,
+              }}
+            ></canvas>
             <canvas
               id='Hiddencanvas'
               width={this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize)}
