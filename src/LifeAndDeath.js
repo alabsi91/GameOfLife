@@ -8,10 +8,18 @@ import DownloadWindow from './DownloadWindow';
 import extractColors from 'extract-colors';
 import { requestNum } from 'request-animation-number';
 
-let interval, lastPaint, lastPaintColors, lastPaintGrid, windowTop, windowLeft, isWindowOpened, panelsPos, extractedData;
+let interval, lastPaint, windowTop, windowLeft, isWindowOpened, panelsPos;
+// data from reading a loaded json file
+let extractedData;
+// undo redo data
 let undo = [];
 let redo = [];
-let xPos, yPos, xDif, yDif, drawDir, dirElem, xColor, yColor, renderData;
+// variabel to be use for shiftDraw
+let xPos, yPos, xDif, yDif, drawDir, dirElem;
+// use for copy colors from image layer to canvas when drawing
+let xColor, yColor;
+// store live pixels first time when play game of life animation
+let renderData;
 
 export default class GameOfLife extends Component {
   constructor(props) {
@@ -46,19 +54,18 @@ export default class GameOfLife extends Component {
   }
 
   componentDidMount() {
+    // render canvas and lines and symmetrical lines at the first time
     this.appendCanvas();
 
+    // check for previous saved drawin in local storage and render it
     if (localStorage.getItem('lastPaint')) {
       const getLastPaint = JSON.parse(localStorage.getItem('lastPaint'));
-      const getLastPaintColros = JSON.parse(localStorage.getItem('lastPaintColors'));
-      const getLastPaintGrid = JSON.parse(localStorage.getItem('lastPaintGrid'));
-      if (getLastPaintGrid[0] > this.state.gridWidth || getLastPaintGrid[1] > this.state.gridHeight) {
-        this.openPopUp(
-          `Can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`
-        );
-      } else this.applyPattren(getLastPaint, getLastPaintColros, getLastPaintGrid[0]);
+      if (getLastPaint[2][0] > this.state.gridWidth || getLastPaint[2][1] > this.state.gridHeight) {
+        this.openPopUp(`Can't retrive last paint, current grid size is smaller than ${getLastPaint[2][0]}x${getLastPaint[2][1]}`);
+      } else this.applyPattren(getLastPaint[0], getLastPaint[1], getLastPaint[2][0]);
     }
 
+    // dispatch those handles from mouse on move event when mouse up is trigered
     const grabHandles = [
       this.grabGrid,
       this.grabSave,
@@ -74,8 +81,14 @@ export default class GameOfLife extends Component {
       this.grabColorPlate,
     ];
     window.addEventListener('mouseup', () => grabHandles.forEach(e => window.removeEventListener('mousemove', e)));
+
+    // assign keybourd shourtcuts for eraser, foold bucket, undo and redo
     this.keyboardShourtcuts();
-    this.readDrawing();
+
+    // save first drawing to undo array
+    this.registerUndo();
+
+    // drag and drop image files to browser
     this.dropImage();
   }
 
@@ -161,7 +174,7 @@ export default class GameOfLife extends Component {
     }
   };
 
-  readDrawing = () => {
+  registerUndo = () => {
     const width = this.state.gridWidth;
     const height = this.state.gridHeight;
     const lives = this.getLivePixels();
@@ -210,24 +223,6 @@ export default class GameOfLife extends Component {
       }
       return findOp;
     }
-  };
-
-  drawCanvas = dontTranslate => {
-    const canvas = document.getElementById('canvas');
-    const [width, height, margin, pxSize] = [
-      this.state.gridWidth,
-      this.state.gridHeight,
-      this.state.pixelSpace,
-      this.state.pixelSize,
-    ];
-
-    canvas.width = width * (margin * 2 + pxSize);
-    canvas.height = height * (margin * 2 + pxSize);
-    const ctx = canvas.getContext('2d');
-
-    if (margin !== 0) ctx.translate(0.5, 0.5);
-
-    this.drawGridLines(dontTranslate);
   };
 
   appendCanvas = () => {
@@ -284,6 +279,24 @@ export default class GameOfLife extends Component {
     window.addEventListener('mouseup', () => {
       canvas.removeEventListener('mousemove', draw);
     });
+  };
+
+  drawCanvas = dontTranslate => {
+    const canvas = document.getElementById('canvas');
+    const [width, height, margin, pxSize] = [
+      this.state.gridWidth,
+      this.state.gridHeight,
+      this.state.pixelSpace,
+      this.state.pixelSize,
+    ];
+
+    canvas.width = width * (margin * 2 + pxSize);
+    canvas.height = height * (margin * 2 + pxSize);
+    const ctx = canvas.getContext('2d');
+
+    if (margin !== 0) ctx.translate(0.5, 0.5);
+
+    this.drawGridLines(dontTranslate);
   };
 
   drawSym = () => {
@@ -395,7 +408,7 @@ export default class GameOfLife extends Component {
       this.setState({ gridWidth: newWidth }, () => {
         this.drawCanvas();
         this.applyPattren(live[0], live[1], pWidth);
-        this.readDrawing();
+        this.registerUndo();
         localStorage.setItem('gridWidth', newWidth);
       });
     }
@@ -410,7 +423,7 @@ export default class GameOfLife extends Component {
         live[0].forEach((e, i) => {
           this.toLive(e, live[1][i]);
         });
-        this.readDrawing();
+        this.registerUndo();
         localStorage.setItem('gridHeight', newHeight);
       });
     }
@@ -523,9 +536,8 @@ export default class GameOfLife extends Component {
       this.openPopUp('Drawing color and background color should not be the same');
     } else if (!this.state.isPlaying) {
       this.setState({ isPlaying: true });
-      if (!this.state.isPaused) {
-        this.saveLastPaint();
-      }
+      if (!this.state.isPaused) this.saveLastPaint();
+
       renderData = new Set(this.getLivePixels()[0]);
       interval = setInterval(() => this.renderLifeDeath(), this.state.speed);
     } else this.pauseRender();
@@ -560,8 +572,8 @@ export default class GameOfLife extends Component {
 
     for (let i = 0; i < toLive.length; i++) {
       if (this.state.maintainColorPlay) {
-        const index = lastPaint.indexOf(toLive[i]);
-        index !== -1 ? this.toLive(toLive[i], lastPaintColors[index]) : this.toLive(toLive[i]);
+        const index = lastPaint[0].indexOf(toLive[i]);
+        index !== -1 ? this.toLive(toLive[i], lastPaint[1][index]) : this.toLive(toLive[i]);
       } else this.toLive(toLive[i]);
       renderData.add(toLive[i]);
     }
@@ -580,31 +592,35 @@ export default class GameOfLife extends Component {
     }
   };
 
+  saveLastPaint = () => {
+    const lives = this.getLivePixels();
+    lastPaint = [lives[0], lives[1], [this.state.gridWidth, this.state.gridHeight]];
+    localStorage.setItem('lastPaint', JSON.stringify(lastPaint));
+  };
+
   renderLast = () => {
     clearInterval(interval);
     this.setState({ isPlaying: false, isPaused: false });
     if (lastPaint) {
-      if (lastPaintGrid[0] > this.state.gridWidth || lastPaintGrid[1] > this.state.gridHeight) {
-        this.openPopUp(`Can't retrive last paint, current grid size is smaller than ${lastPaintGrid[0]}x${lastPaintGrid[1]}`);
-      } else if (lastPaintGrid[0] !== this.state.gridWidth || lastPaintGrid[1] !== this.state.gridHeight) {
-        this.readDrawing();
-        this.openPopUp(`This paint was painted orginaly on ${lastPaintGrid[0]}x${lastPaintGrid[1]} grid`);
-        this.applyPattren(lastPaint, lastPaintColors, lastPaintGrid[0]);
+      if (lastPaint[2]?.[0] > this.state.gridWidth || lastPaint[2]?.[1] > this.state.gridHeight) {
+        this.openPopUp(`Can't retrive last paint, current grid size is smaller than ${lastPaint[2]?.[0]}x${lastPaint[2]?.[1]}`);
+      } else if (lastPaint[2]?.[0] !== this.state.gridWidth || lastPaint[2]?.[1] !== this.state.gridHeight) {
+        this.registerUndo();
+        this.openPopUp(`This paint was painted orginaly on ${lastPaint[2]?.[0]}x${lastPaint[2]?.[1]} grid`);
+        this.applyPattren(lastPaint[0], lastPaint[1], lastPaint[2]?.[0]);
       } else {
-        this.readDrawing();
-        this.applyPattren(lastPaint, lastPaintColors, lastPaintGrid[0]);
+        this.registerUndo();
+        this.applyPattren(lastPaint[0], lastPaint[1], lastPaint[2]?.[0]);
       }
     } else if (localStorage.getItem('lastPaint')) {
       const getLastPaint = JSON.parse(localStorage.getItem('lastPaint'));
-      const getLastPaintColros = JSON.parse(localStorage.getItem('lastPaintColors'));
-      const getLastPaintGrid = JSON.parse(localStorage.getItem('lastPaintGrid'));
-      if (getLastPaintGrid[0] > this.state.gridWidth || getLastPaintGrid[1] > this.state.gridHeight) {
+      if (getLastPaint[2]?.[0] > this.state.gridWidth || getLastPaint[2]?.[1] > this.state.gridHeight) {
         this.openPopUp(
-          `Can't retrive last paint, current grid size is smaller than ${getLastPaintGrid[0]}x${getLastPaintGrid[1]}`
+          `Can't retrive last paint, current grid size is smaller than ${getLastPaint[2]?.[0]}x${getLastPaint[2]?.[1]}`
         );
       } else {
-        this.readDrawing();
-        this.applyPattren(getLastPaint, getLastPaintColros, getLastPaintGrid[0]);
+        this.registerUndo();
+        this.applyPattren(getLastPaint[0], getLastPaint[1], getLastPaint[2]?.[0]);
       }
     } else this.openPopUp('Last Paint Not found');
   };
@@ -813,7 +829,7 @@ export default class GameOfLife extends Component {
         this.toggleLoadWindow();
         undo = [];
         redo = [];
-        this.readDrawing();
+        this.registerUndo();
       }
     );
   };
@@ -872,8 +888,8 @@ export default class GameOfLife extends Component {
         const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
         const red = y * (canvas.width * 4) + x * 4;
         const transparent = ctxData[red + 3] / 255 === 0;
-        let color = this.RGBToHex(ctxData[red], ctxData[red + 1], ctxData[red + 2]) ;
-        color = transparent ? color + '00' : color
+        let color = this.RGBToHex(ctxData[red], ctxData[red + 1], ctxData[red + 2]);
+        color = transparent ? color + '00' : color;
         return color;
       };
 
@@ -939,83 +955,6 @@ export default class GameOfLife extends Component {
     }
   };
 
-  // paintBuc = i => {
-  //   if (this.state.paintBuc) {
-  //     const start = Date.now();
-  //     const [canvas, width, height, margin, bgColor, pxSize] = [
-  //       document.getElementById('canvas'),
-  //       this.state.gridWidth,
-  //       this.state.gridHeight,
-  //       this.state.pixelSpace,
-  //       this.state.backgroundPixleColor,
-  //       this.state.pixelSize,
-  //     ];
-  //     const ctx = canvas.getContext('2d');
-  //     const ctxData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-
-  //     const checkLive = p => {
-  //       const findRow = ~~(p / width);
-  //       const findColumn = p - findRow * width;
-  //       const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
-  //       const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
-  //       const red = y * (canvas.width * 4) + x * 4;
-  //       const color = this.RGBToHex(ctxData[red], ctxData[red + 1], ctxData[red + 2]);
-  //       const isLive = color !== bgColor;
-  //       return { is: isLive, color: color };
-  //     };
-  //     const correntColor = checkLive(i).color;
-  //     const sameColor = correntColor !== this.state.pixleColor;
-
-  //     const isEmpty = d => {
-  //       if (d >= 0 && d < width * height) {
-  //         const check = checkLive(d);
-  //         if (this.state.eraser && check.is && check.color === correntColor) {
-  //           return true;
-  //         } else if (!this.state.eraser && check.color === correntColor && sameColor) {
-  //           return true;
-  //         } else return false;
-  //       } else return false;
-  //     };
-
-  //     const drawn = new Set([]);
-  //     const toDraw = x => {
-  //       if (this.state.eraser) {
-  //         this.toDeath(x);
-  //       } else {
-  //         this.toLive(x);
-  //       }
-  //       drawn.add(x);
-  //     };
-  //     const delay = ms => new Promise(res => setTimeout(res, ms));
-  //     const checkAround = async x => {
-  //       await delay(1);
-  //       const next = x + 1;
-  //       const previous = x - 1;
-  //       const up = x - width;
-  //       const down = x + width;
-  //       if (isEmpty(next) && !Number.isInteger((x + 1) / width) && !drawn.has(next)) {
-  //         toDraw(next);
-  //         checkAround(next);
-  //       }
-  //       if (isEmpty(previous) && !Number.isInteger(x / width) && !drawn.has(previous)) {
-  //         toDraw(previous);
-  //         checkAround(previous);
-  //       }
-  //       if (isEmpty(up) && ~~(x / width) !== 0 && !drawn.has(up)) {
-  //         toDraw(up);
-  //         checkAround(up);
-  //       }
-  //       if (isEmpty(down) && ~~(x / width) !== height && !drawn.has(down)) {
-  //         toDraw(down);
-  //         checkAround(down);
-  //       }
-  //       if (x === 0) console.log((Date.now() - start) / 1000);
-  //     };
-  //     toDraw(i);
-  //     checkAround(i);
-  //   }
-  // };
-
   exportData = () => {
     const myData = localStorage.getItem('saved');
     const myblob = new Blob([myData], { type: 'application/json' });
@@ -1049,35 +988,45 @@ export default class GameOfLife extends Component {
   };
 
   shiftDraw = e => {
-    const perSquare = this.state.pixelSize + this.state.pixelSpace * 2;
+    const [width, margin, pxSize, eraser, symX, symY] = [
+      this.state.gridWidth,
+      this.state.pixelSize,
+      this.state.pixelSpace,
+      this.state.eraser,
+      this.state.symmetricalX,
+      this.state.symmetricalY,
+    ];
+
+    const perSquare = margin + pxSize * 2;
+
     if (e.movementX < 0 && drawDir === 'x' && xDif !== ~~((xPos - e.x) / perSquare)) {
-      this.state.eraser ? this.toDeath(dirElem) : this.toLive(dirElem);
+      eraser ? this.toDeath(dirElem) : this.toLive(dirElem);
       this.symmetricalX(dirElem);
       this.symmetricalY(dirElem);
-      if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(dirElem));
+      if (symY && symX) this.symmetricalX(this.symmetricalY(dirElem));
       xDif = ~~((xPos - e.x) / perSquare);
       dirElem = dirElem - 1;
     } else if (e.movementX > 0 && drawDir === 'x' && xDif !== ~~((e.x - xPos) / perSquare)) {
-      this.state.eraser ? this.toDeath(dirElem) : this.toLive(dirElem);
+      eraser ? this.toDeath(dirElem) : this.toLive(dirElem);
       this.symmetricalX(dirElem);
       this.symmetricalY(dirElem);
-      if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(dirElem));
+      if (symY && symX) this.symmetricalX(this.symmetricalY(dirElem));
       xDif = ~~((e.x - xPos) / perSquare);
       dirElem = dirElem + 1;
     } else if (e.movementY < 0 && drawDir === 'y' && yDif !== ~~((yPos - e.y) / perSquare)) {
-      this.state.eraser ? this.toDeath(dirElem) : this.toLive(dirElem);
+      eraser ? this.toDeath(dirElem) : this.toLive(dirElem);
       this.symmetricalX(dirElem);
       this.symmetricalY(dirElem);
-      if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(dirElem));
+      if (symY && symX) this.symmetricalX(this.symmetricalY(dirElem));
       yDif = ~~((yPos - e.y) / perSquare);
-      dirElem = dirElem - this.state.gridWidth;
+      dirElem = dirElem - width;
     } else if (e.movementY > 0 && drawDir === 'y' && yDif !== ~~((e.y - yPos) / perSquare)) {
-      this.state.eraser ? this.toDeath(dirElem) : this.toLive(dirElem);
+      eraser ? this.toDeath(dirElem) : this.toLive(dirElem);
       this.symmetricalX(dirElem);
       this.symmetricalY(dirElem);
-      if (this.state.symmetricalY && this.state.symmetricalX) this.symmetricalX(this.symmetricalY(dirElem));
+      if (symY && symX) this.symmetricalX(this.symmetricalY(dirElem));
       yDif = ~~((e.y - yPos) / perSquare);
-      dirElem = dirElem + this.state.gridWidth;
+      dirElem = dirElem + width;
     }
   };
 
@@ -1088,7 +1037,7 @@ export default class GameOfLife extends Component {
   };
 
   moveGrid = dir => {
-    this.readDrawing();
+    this.registerUndo();
     const width = this.state.gridWidth;
     const lives = this.getLivePixels();
     let row = lives[0];
@@ -1137,7 +1086,7 @@ export default class GameOfLife extends Component {
       }
     }
 
-    this.readDrawing();
+    this.registerUndo();
   };
 
   imageColorPic = e => {
@@ -1175,16 +1124,6 @@ export default class GameOfLife extends Component {
     if (b.length === 1) b = '0' + b;
 
     return '#' + r + g + b;
-  };
-
-  saveLastPaint = () => {
-    const lives = this.getLivePixels();
-    lastPaint = lives[0];
-    lastPaintColors = lives[1];
-    lastPaintGrid = [this.state.gridWidth, this.state.gridHeight];
-    localStorage.setItem('lastPaint', JSON.stringify(lives[0]));
-    localStorage.setItem('lastPaintColors', JSON.stringify(lives[1]));
-    localStorage.setItem('lastPaintGrid', JSON.stringify(lastPaintGrid));
   };
 
   mergeCanvses = transparent => {
@@ -2103,7 +2042,7 @@ export default class GameOfLife extends Component {
             }}
             onMouseUp={() => {
               this.setState({ drwaMode: false });
-              this.readDrawing();
+              this.registerUndo();
               window.removeEventListener('mousemove', this.getMouseDir);
               window.removeEventListener('mousemove', this.shiftDraw);
               [drawDir, dirElem, xDif, yDif] = Array(4).fill(false);
