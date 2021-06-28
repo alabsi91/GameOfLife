@@ -243,19 +243,20 @@ export default class GameOfLife extends Component {
       const square = getSquare(e.clientX - fromLeft, e.clientY - fromTop);
 
       this.paintBuc(square);
+      if (!this.state.paintBuc) {
+        if (this.state.eraser) {
+          this.toDeath(square);
+        } else {
+          this.toLive(square);
+          this.imageColorPic(e);
+        }
 
-      if (this.state.eraser) {
-        this.toDeath(square);
-      } else {
-        this.toLive(square);
-        this.imageColorPic(e);
+        this.symmetricalX(square);
+        this.symmetricalY(square);
+
+        if (this.state.symmetricalY && this.state.symmetricalX && !this.state.shiftPressed)
+          this.symmetricalX(this.symmetricalY(square));
       }
-
-      this.symmetricalX(square);
-      this.symmetricalY(square);
-
-      if (this.state.symmetricalY && this.state.symmetricalX && !this.state.shiftPressed)
-        this.symmetricalX(this.symmetricalY(square));
     };
 
     const shiftDraw = e => {
