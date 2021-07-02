@@ -28,28 +28,25 @@ export default class GameOfLife extends Component {
       colorPlate: '',
       isColorCopy: false,
       isPlaying: false,
-      mouseInside: false,
       isPaused: false,
-      drwaMode: false,
+      speed: localStorage.getItem('speed') ? Number(localStorage.getItem('speed')) : 100,
+      maintainColorPlay: false,
+      mouseInside: false,
       isRandomColor: false,
       symmetricalX: false,
       symmetricalY: false,
       eraser: false,
       paintBuc: false,
       shiftPressed: false,
-      maintainColorPlay: false,
       loadCards: this.renderLoadCards(),
-      speed: localStorage.getItem('speed') ? Number(localStorage.getItem('speed')) : 100,
+      width: localStorage.getItem('width') ? Number(localStorage.getItem('width')) : 90,
+      height: localStorage.getItem('height') ? Number(localStorage.getItem('height')) : 50,
       pixelSize: localStorage.getItem('pixelSize') ? Number(localStorage.getItem('pixelSize')) : 15,
-      gridWidth: localStorage.getItem('gridWidth') ? Number(localStorage.getItem('gridWidth')) : 90,
-      gridHeight: localStorage.getItem('gridHeight') ? Number(localStorage.getItem('gridHeight')) : 50,
-      pixelSpace: localStorage.getItem('pixelSpace') ? Number(localStorage.getItem('pixelSpace')) : 0.5,
+      pxMargin: localStorage.getItem('pxMargin') ? Number(localStorage.getItem('pxMargin')) : 0.5,
       pixleColor: localStorage.getItem('pixleColor') ? localStorage.getItem('pixleColor') : '#ffffff',
-      betweenPixleColor: localStorage.getItem('betweenPixleColor') ? localStorage.getItem('betweenPixleColor') : '#282828',
-      SymmetryLinesColor: localStorage.getItem('SymmetryLinesColor') ? localStorage.getItem('SymmetryLinesColor') : '#868686',
-      backgroundPixleColor: localStorage.getItem('backgroundPixleColor')
-        ? localStorage.getItem('backgroundPixleColor')
-        : '#000000',
+      linesColor: localStorage.getItem('linesColor') ? localStorage.getItem('linesColor') : '#282828',
+      SymColor: localStorage.getItem('SymColor') ? localStorage.getItem('SymColor') : '#868686',
+      backgroundColor: localStorage.getItem('backgroundColor') ? localStorage.getItem('backgroundColor') : '#000000',
     };
   }
 
@@ -60,7 +57,8 @@ export default class GameOfLife extends Component {
     // check for previous saved drawin in local storage and render it
     if (localStorage.getItem('lastPaint')) {
       const getLastPaint = JSON.parse(localStorage.getItem('lastPaint'));
-      if (getLastPaint[2][0] > this.state.gridWidth || getLastPaint[2][1] > this.state.gridHeight) {
+      // compare last paint width and height to corrent gird width and height
+      if (getLastPaint[2][0] > this.state.width || getLastPaint[2][1] > this.state.height) {
         this.openPopUp(`Can't retrive last paint, current grid size is smaller than ${getLastPaint[2][0]}x${getLastPaint[2][1]}`);
       } else this.applyPattren(getLastPaint[0], getLastPaint[1], getLastPaint[2][0]);
     }
@@ -97,6 +95,7 @@ export default class GameOfLife extends Component {
       e.stopPropagation();
       e.preventDefault();
     };
+    // prevent browser on drag default behaviour
     window.addEventListener('dragenter', preventDefault, false);
     window.addEventListener('dragexit', preventDefault, false);
     window.addEventListener('dragover', preventDefault, false);
@@ -105,7 +104,9 @@ export default class GameOfLife extends Component {
       e.stopPropagation();
       e.preventDefault();
       const imgTag = document.getElementById('img');
+      // get droped data
       const selectedFile = e.dataTransfer.files[0];
+      // check if the data is image
       if (selectedFile?.type?.includes('image')) {
         const reader = new FileReader();
         imgTag.removeAttribute('style');
@@ -113,6 +114,7 @@ export default class GameOfLife extends Component {
           document.getElementById('imageLayer').style.display = 'block';
           document.getElementById('colorPlateControlPanel').style.display = 'block';
           imgTag.src = e.target.result;
+          // colors plate
           extractColors(e.target.result, { saturationImportance: 0, splitPower: 5, distance: 0.1, pixels: 100 })
             .then(e => {
               this.setState({ colorPlate: e.map((c, i) => <ColorPlate key={i} color={c.hex} that={this} />) });
@@ -135,16 +137,16 @@ export default class GameOfLife extends Component {
 
     window.addEventListener('keyup', e => {
       if (!isWindowOpened) {
-        if (e.ctrlKey && e.key.toLowerCase() === 'z' && undo.length > 0 && !this.state.drwaMode) {
+        if (e.ctrlKey && e.key.toLowerCase() === 'z' && undo.length > 0 && !this.state.isPlaying) {
           document.querySelectorAll('input[type="number"').forEach(e => e.blur());
           this.undo();
-        } else if (e.ctrlKey && e.key.toLowerCase() === 'y' && redo.length > 0 && !this.state.drwaMode) {
+        } else if (e.ctrlKey && e.key.toLowerCase() === 'y' && redo.length > 0 && !this.state.isPlaying) {
           document.querySelectorAll('input[type="number"').forEach(e => e.blur());
           this.redo();
-        } else if (e.key.toLowerCase() === 'e' && !this.state.drwaMode) {
+        } else if (e.key.toLowerCase() === 'e' && !this.state.isPlaying) {
           document.querySelectorAll('input[type="number"').forEach(e => e.blur());
           this.state.eraser ? this.setState({ eraser: false }) : this.setState({ eraser: true });
-        } else if (e.key.toLowerCase() === 'b' && !this.state.drwaMode) {
+        } else if (e.key.toLowerCase() === 'b' && !this.state.isPlaying) {
           document.querySelectorAll('input[type="number"').forEach(e => e.blur());
           this.state.paintBuc ? this.setState({ paintBuc: false }) : this.setState({ paintBuc: true });
         } else if (e.key === 'Shift') this.setState({ shiftPressed: false });
@@ -155,7 +157,7 @@ export default class GameOfLife extends Component {
   undo = () => {
     const last = undo.length - 1;
     if (undo.length > 1) {
-      this.setState({ gridWidth: undo[last - 1][2][0], gridHeight: undo[last - 1][2][1] }, () => {
+      this.setState({ width: undo[last - 1][2][0], height: undo[last - 1][2][1] }, () => {
         this.applyPattren(undo[last - 1]?.[0], undo[last - 1]?.[1], undo[last - 1]?.[2]?.[0]);
         redo.push(undo[last]);
         undo.splice(last, 1);
@@ -166,7 +168,7 @@ export default class GameOfLife extends Component {
   redo = () => {
     if (redo.length > 0) {
       const last = redo.length - 1;
-      this.setState({ gridWidth: redo[last][2][0], gridHeight: redo[last][2][1] }, () => {
+      this.setState({ width: redo[last][2][0], height: redo[last][2][1] }, () => {
         this.applyPattren(redo[last][0], redo[last][1], redo[last][2][0]);
         undo.push(redo[last]);
         redo.splice(last, 1);
@@ -174,9 +176,10 @@ export default class GameOfLife extends Component {
     }
   };
 
+  // push drawing data to undo array
   registerUndo = () => {
-    const width = this.state.gridWidth;
-    const height = this.state.gridHeight;
+    const width = this.state.width;
+    const height = this.state.height;
     const lives = this.getLivePixels();
     const reg = [lives[0], lives[1], [width, height]];
     undo.push(reg);
@@ -184,9 +187,9 @@ export default class GameOfLife extends Component {
 
   applyPattren = (patren, colors, pWidth, x, y) => {
     this.drawCanvas(true);
-    const dif = this.state.gridWidth - pWidth;
-    const moveX = x ? ~~(this.state.gridWidth / 2) - x : 0;
-    const moveY = y ? ~~this.state.gridWidth * (~~(this.state.gridHeight / 2) - y) : 0;
+    const dif = this.state.width - pWidth;
+    const moveX = x ? ~~(this.state.width / 2) - x : 0;
+    const moveY = y ? ~~this.state.width * (~~(this.state.height / 2) - y) : 0;
     const centre = moveX + moveY;
 
     for (let i = 0; i < patren.length; i++) {
@@ -197,9 +200,9 @@ export default class GameOfLife extends Component {
 
   symmetricalX = i => {
     if (this.state.symmetricalX) {
-      const findRow = ~~(i / this.state.gridWidth) * this.state.gridWidth;
-      const middleRow = findRow + Math.floor(this.state.gridWidth / 2);
-      const findOp = Number.isInteger(this.state.gridWidth / 2) ? middleRow - (i - middleRow + 1) : middleRow - (i - middleRow);
+      const findRow = ~~(i / this.state.width) * this.state.width;
+      const middleRow = findRow + Math.floor(this.state.width / 2);
+      const findOp = Number.isInteger(this.state.width / 2) ? middleRow - (i - middleRow + 1) : middleRow - (i - middleRow);
       if (this.state.eraser) {
         this.toDeath(findOp);
       } else {
@@ -210,12 +213,12 @@ export default class GameOfLife extends Component {
 
   symmetricalY = i => {
     if (this.state.symmetricalY) {
-      const findRow = ~~(i / this.state.gridWidth);
-      const findMiddle = Math.floor(this.state.gridHeight / 2);
+      const findRow = ~~(i / this.state.width);
+      const findMiddle = Math.floor(this.state.height / 2);
       const findDef = findMiddle - findRow;
-      const findOp = Number.isInteger(this.state.gridHeight / 2)
-        ? i + findDef * this.state.gridWidth * 2 - this.state.gridWidth
-        : i + findDef * this.state.gridWidth * 2;
+      const findOp = Number.isInteger(this.state.height / 2)
+        ? i + findDef * this.state.width * 2 - this.state.width
+        : i + findDef * this.state.width * 2;
       if (this.state.eraser) {
         this.toDeath(findOp);
       } else {
@@ -231,9 +234,9 @@ export default class GameOfLife extends Component {
     this.drawCanvas();
 
     const getSquare = (x, y) => {
-      const row = ~~(y / (this.state.pixelSize + this.state.pixelSpace * 2));
-      const column = ~~(x / (this.state.pixelSize + this.state.pixelSpace * 2));
-      const pos = row * this.state.gridWidth + column;
+      const row = ~~(y / (this.state.pixelSize + this.state.pxMargin * 2));
+      const column = ~~(x / (this.state.pixelSize + this.state.pxMargin * 2));
+      const pos = row * this.state.width + column;
       return pos;
     };
 
@@ -284,12 +287,7 @@ export default class GameOfLife extends Component {
 
   drawCanvas = dontTranslate => {
     const canvas = document.getElementById('canvas');
-    const [width, height, margin, pxSize] = [
-      this.state.gridWidth,
-      this.state.gridHeight,
-      this.state.pixelSpace,
-      this.state.pixelSize,
-    ];
+    const [width, height, margin, pxSize] = [this.state.width, this.state.height, this.state.pxMargin, this.state.pixelSize];
 
     canvas.width = width * (margin * 2 + pxSize);
     canvas.height = height * (margin * 2 + pxSize);
@@ -303,11 +301,11 @@ export default class GameOfLife extends Component {
   drawSym = () => {
     const [canvas, width, height, margin, pxSize, symColor] = [
       document.getElementById('Hiddencanvas'),
-      this.state.gridWidth,
-      this.state.gridHeight,
-      this.state.pixelSpace,
+      this.state.width,
+      this.state.height,
+      this.state.pxMargin,
       this.state.pixelSize,
-      this.state.SymmetryLinesColor,
+      this.state.SymColor,
     ];
     const ctx = canvas.getContext('2d');
 
@@ -335,11 +333,11 @@ export default class GameOfLife extends Component {
   drawGridLines = dontTranslate => {
     const [canvas, width, height, margin, pxSize, linesColor] = [
       document.getElementById('Hiddencanvas'),
-      this.state.gridWidth,
-      this.state.gridHeight,
-      this.state.pixelSpace,
+      this.state.width,
+      this.state.height,
+      this.state.pxMargin,
       this.state.pixelSize,
-      this.state.betweenPixleColor,
+      this.state.linesColor,
     ];
     const ctx = canvas.getContext('2d');
     if (margin !== 0 && !dontTranslate) ctx.translate(0.5, 0.5);
@@ -373,12 +371,12 @@ export default class GameOfLife extends Component {
     const [canvas, pxSize] = [document.getElementById('canvas'), this.state.pixelSize];
     const ctx = canvas.getContext('2d');
     const pos = this.getPos(p);
-    ctx.fillStyle = this.state.backgroundPixleColor;
+    ctx.fillStyle = this.state.backgroundColor;
     ctx.clearRect(pos.x, pos.y, pxSize, pxSize);
   };
 
   getPos = p => {
-    const [width, margin, pxSize] = [this.state.gridWidth, this.state.pixelSpace, this.state.pixelSize];
+    const [width, margin, pxSize] = [this.state.width, this.state.pxMargin, this.state.pixelSize];
     const findRow = ~~(p / width);
     const findColumn = p - findRow * width;
     const x = findColumn * (pxSize + margin * 2) + margin;
@@ -387,8 +385,8 @@ export default class GameOfLife extends Component {
   };
 
   changePixelSize = newSize => {
-    const width = this.state.gridWidth * (this.state.pixelSpace * 2 + newSize);
-    const height = this.state.gridHeight * (this.state.pixelSpace * 2 + newSize);
+    const width = this.state.width * (this.state.pxMargin * 2 + newSize);
+    const height = this.state.height * (this.state.pxMargin * 2 + newSize);
     newSize = width > 10000 || height > 10000 ? this.state.pixelSize : newSize;
     if (Number(newSize) && this.state.pixelSize !== newSize) {
       newSize = Number(newSize) < 1 ? 1 : Number(newSize);
@@ -405,12 +403,12 @@ export default class GameOfLife extends Component {
     if (Number(newWidth)) {
       newWidth = Number(newWidth) > 1000 ? 1000 : Number(newWidth) < 5 ? 5 : Number(newWidth);
       const live = this.getLivePixels();
-      const pWidth = this.state.gridWidth;
-      this.setState({ gridWidth: newWidth }, () => {
+      const pWidth = this.state.width;
+      this.setState({ width: newWidth }, () => {
         this.drawCanvas();
         this.applyPattren(live[0], live[1], pWidth);
         this.registerUndo();
-        localStorage.setItem('gridWidth', newWidth);
+        localStorage.setItem('width', newWidth);
       });
     }
   };
@@ -419,13 +417,13 @@ export default class GameOfLife extends Component {
     if (Number(newHeight)) {
       newHeight = Number(newHeight) > 1000 ? 1000 : Number(newHeight) < 5 ? 5 : Number(newHeight);
       const live = this.getLivePixels();
-      this.setState({ gridHeight: newHeight }, () => {
+      this.setState({ height: newHeight }, () => {
         this.drawCanvas();
         live[0].forEach((e, i) => {
           this.toLive(e, live[1][i]);
         });
         this.registerUndo();
-        localStorage.setItem('gridHeight', newHeight);
+        localStorage.setItem('height', newHeight);
       });
     }
   };
@@ -434,10 +432,10 @@ export default class GameOfLife extends Component {
     newSize = Number(newSize) > 10 ? 10 : Number(newSize);
     if (Number(newSize) !== null) {
       const live = this.getLivePixels();
-      this.setState({ pixelSpace: Number(newSize / 2) }, () => {
+      this.setState({ pxMargin: Number(newSize / 2) }, () => {
         this.drawCanvas();
         live[0].forEach((e, i) => this.toLive(e, live[1][i]));
-        localStorage.setItem('pixelSpace', Number(newSize / 2));
+        localStorage.setItem('pxMargin', Number(newSize / 2));
       });
     }
   };
@@ -445,9 +443,9 @@ export default class GameOfLife extends Component {
   getLivePixels = () => {
     const [canvas, width, height, margin, pxSize] = [
       document.getElementById('canvas'),
-      this.state.gridWidth,
-      this.state.gridHeight,
-      this.state.pixelSpace,
+      this.state.width,
+      this.state.height,
+      this.state.pxMargin,
       this.state.pixelSize,
     ];
 
@@ -480,8 +478,8 @@ export default class GameOfLife extends Component {
   checkLive = p => {
     const [canvas, width, margin, pxSize] = [
       document.getElementById('canvas'),
-      this.state.gridWidth,
-      this.state.pixelSpace,
+      this.state.width,
+      this.state.pxMargin,
       this.state.pixelSize,
     ];
     const ctx = canvas.getContext('2d');
@@ -498,7 +496,7 @@ export default class GameOfLife extends Component {
 
   checkGameRules = (i, isLive) => {
     let livePixels = 0;
-    const [width, height] = [this.state.gridWidth, this.state.gridHeight];
+    const [width, height] = [this.state.width, this.state.height];
     const firstPixle = Number.isInteger(i / width);
     const lastPixle = Number.isInteger((i + 1) / width);
 
@@ -533,7 +531,7 @@ export default class GameOfLife extends Component {
   };
 
   play = () => {
-    if (this.state.pixleColor === this.state.backgroundPixleColor) {
+    if (this.state.pixleColor === this.state.backgroundColor) {
       this.openPopUp('Drawing color and background color should not be the same');
     } else if (!this.state.isPlaying) {
       this.setState({ isPlaying: true });
@@ -545,8 +543,8 @@ export default class GameOfLife extends Component {
   };
 
   renderLifeDeath = record => {
-    const width = this.state.gridWidth;
-    const height = this.state.gridHeight;
+    const width = this.state.width;
+    const height = this.state.height;
     const toLive = [];
     const toDeath = [];
     const foundDead = new Set();
@@ -595,7 +593,7 @@ export default class GameOfLife extends Component {
 
   saveLastPaint = () => {
     const lives = this.getLivePixels();
-    lastPaint = [lives[0], lives[1], [this.state.gridWidth, this.state.gridHeight]];
+    lastPaint = [lives[0], lives[1], [this.state.width, this.state.height]];
     localStorage.setItem('lastPaint', JSON.stringify(lastPaint));
   };
 
@@ -603,9 +601,9 @@ export default class GameOfLife extends Component {
     clearInterval(interval);
     this.setState({ isPlaying: false, isPaused: false });
     if (lastPaint) {
-      if (lastPaint[2]?.[0] > this.state.gridWidth || lastPaint[2]?.[1] > this.state.gridHeight) {
+      if (lastPaint[2]?.[0] > this.state.width || lastPaint[2]?.[1] > this.state.height) {
         this.openPopUp(`Can't retrive last paint, current grid size is smaller than ${lastPaint[2]?.[0]}x${lastPaint[2]?.[1]}`);
-      } else if (lastPaint[2]?.[0] !== this.state.gridWidth || lastPaint[2]?.[1] !== this.state.gridHeight) {
+      } else if (lastPaint[2]?.[0] !== this.state.width || lastPaint[2]?.[1] !== this.state.height) {
         this.registerUndo();
         this.openPopUp(`This paint was painted orginaly on ${lastPaint[2]?.[0]}x${lastPaint[2]?.[1]} grid`);
         this.applyPattren(lastPaint[0], lastPaint[1], lastPaint[2]?.[0]);
@@ -615,7 +613,7 @@ export default class GameOfLife extends Component {
       }
     } else if (localStorage.getItem('lastPaint')) {
       const getLastPaint = JSON.parse(localStorage.getItem('lastPaint'));
-      if (getLastPaint[2]?.[0] > this.state.gridWidth || getLastPaint[2]?.[1] > this.state.gridHeight) {
+      if (getLastPaint[2]?.[0] > this.state.width || getLastPaint[2]?.[1] > this.state.height) {
         this.openPopUp(
           `Can't retrive last paint, current grid size is smaller than ${getLastPaint[2]?.[0]}x${getLastPaint[2]?.[1]}`
         );
@@ -771,13 +769,7 @@ export default class GameOfLife extends Component {
       pixelsColors: lives[1],
       savingName: document.getElementById('saveName').value,
       drawngImg: '',
-      saveSettings: [
-        this.state.gridWidth,
-        this.state.gridHeight,
-        this.state.pixelSize,
-        this.state.pixelSpace,
-        this.state.backgroundPixleColor,
-      ],
+      saveSettings: [this.state.width, this.state.height, this.state.pixelSize, this.state.pxMargin, this.state.backgroundColor],
     };
     const dataURL = this.mergeCanvses(false).toDataURL('image/png');
     newSave.drawngImg = dataURL;
@@ -813,18 +805,18 @@ export default class GameOfLife extends Component {
     this.setState(
       {
         isPaused: false,
-        gridWidth: saved[i].saveSettings[0],
-        gridHeight: saved[i].saveSettings[1],
+        width: saved[i].saveSettings[0],
+        height: saved[i].saveSettings[1],
         pixelSize: saved[i].saveSettings[2],
-        pixelSpace: saved[i].saveSettings[3],
-        backgroundPixleColor: saved[i].saveSettings[4],
+        pxMargin: saved[i].saveSettings[3],
+        backgroundColor: saved[i].saveSettings[4],
       },
       () => {
-        localStorage.setItem('gridWidth', saved[i].saveSettings[0]);
-        localStorage.setItem('gridHeight', saved[i].saveSettings[1]);
+        localStorage.setItem('width', saved[i].saveSettings[0]);
+        localStorage.setItem('height', saved[i].saveSettings[1]);
         localStorage.setItem('pixelSize', saved[i].saveSettings[2]);
-        localStorage.setItem('pixelSpace', saved[i].saveSettings[3]);
-        localStorage.setItem('backgroundPixleColor', saved[i].saveSettings[4]);
+        localStorage.setItem('pxMargin', saved[i].saveSettings[3]);
+        localStorage.setItem('backgroundColor', saved[i].saveSettings[4]);
         this.applyPattren(saved[i].livePixels, saved[i].pixelsColors, saved[i].saveSettings[0]);
         this.saveLastPaint();
         this.toggleLoadWindow();
@@ -873,9 +865,9 @@ export default class GameOfLife extends Component {
     if (this.state.paintBuc) {
       const [canvas, width, height, margin, pxSize] = [
         document.getElementById('canvas'),
-        this.state.gridWidth,
-        this.state.gridHeight,
-        this.state.pixelSpace,
+        this.state.width,
+        this.state.height,
+        this.state.pxMargin,
         this.state.pixelSize,
       ];
       const ctx = canvas.getContext('2d');
@@ -990,9 +982,9 @@ export default class GameOfLife extends Component {
 
   shiftDraw = e => {
     const [width, margin, pxSize, eraser, symX, symY] = [
-      this.state.gridWidth,
+      this.state.width,
       this.state.pixelSize,
-      this.state.pixelSpace,
+      this.state.pxMargin,
       this.state.eraser,
       this.state.symmetricalX,
       this.state.symmetricalY,
@@ -1039,7 +1031,7 @@ export default class GameOfLife extends Component {
 
   moveGrid = dir => {
     this.registerUndo();
-    const width = this.state.gridWidth;
+    const width = this.state.width;
     const lives = this.getLivePixels();
     let row = lives[0];
     let colors = lives[1];
@@ -1062,7 +1054,7 @@ export default class GameOfLife extends Component {
     const canvas = document.getElementById('canvas');
     const fromLeft = img.getBoundingClientRect().left;
     const fromTop = img.getBoundingClientRect().top;
-    const [margin, pxSize] = [this.state.pixelSpace, this.state.pixelSize];
+    const [margin, pxSize] = [this.state.pxMargin, this.state.pixelSize];
 
     can.width = img.width;
     can.height = img.height;
@@ -1137,7 +1129,7 @@ export default class GameOfLife extends Component {
     temp.height = main.height;
 
     if (!transparent) {
-      ctxTemp.fillStyle = this.state.backgroundPixleColor;
+      ctxTemp.fillStyle = this.state.backgroundColor;
       ctxTemp.fillRect(0, 0, temp.width, temp.height);
     }
     ctxTemp.drawImage(main, 0, 0);
@@ -1148,7 +1140,7 @@ export default class GameOfLife extends Component {
   windowOpen = boolean => (isWindowOpened = boolean);
   resetRenderData = () => (renderData = null);
   checkColorsBeforeRender = () =>
-    this.state.pixleColor === this.state.backgroundPixleColor
+    this.state.pixleColor === this.state.backgroundColor
       ? this.openPopUp('Drawing color and background color should not be the same')
       : true;
 
@@ -1384,7 +1376,7 @@ export default class GameOfLife extends Component {
             disabled={this.state.isPlaying}
             onChange={e => {
               const value = e.target.value;
-              if (this.state.gridWidth < 45 || this.state.gridHeight < 45) {
+              if (this.state.width < 45 || this.state.height < 45) {
                 this.openPopUp('This patren requiers a 45x45 grid and greater');
               } else if (value === 'simkinGliderGun') {
                 this.applyPattren(pattrens[value], undefined, 60, 0, 1);
@@ -1449,7 +1441,7 @@ export default class GameOfLife extends Component {
             title='How many squares per row'
             min='5'
             max='1000'
-            value={this.state.gridWidth}
+            value={this.state.width}
             disabled={this.state.isPlaying}
             onChange={e => this.changeGridWidth(e.target.value)}
             onClick={e => e.target.select()}
@@ -1457,7 +1449,7 @@ export default class GameOfLife extends Component {
               const el = document.getElementById('inputWidthType');
               el.style.display = 'block';
               e.target.style.display = 'none';
-              el.value = this.state.gridWidth;
+              el.value = this.state.width;
               el.select();
             }}
           ></input>
@@ -1491,7 +1483,7 @@ export default class GameOfLife extends Component {
             title='How many squares per column'
             min='5'
             max='1000'
-            value={this.state.gridHeight}
+            value={this.state.height}
             disabled={this.state.isPlaying}
             onChange={e => this.changeGridHeight(e.target.value)}
             onClick={e => e.target.select()}
@@ -1499,7 +1491,7 @@ export default class GameOfLife extends Component {
               const el = document.getElementById('inputHeightType');
               el.style.display = 'block';
               e.target.style.display = 'none';
-              el.value = this.state.gridWidth;
+              el.value = this.state.width;
               el.select();
             }}
           ></input>
@@ -1541,7 +1533,7 @@ export default class GameOfLife extends Component {
               const el = document.getElementById('inputPSizeType');
               el.style.display = 'block';
               e.target.style.display = 'none';
-              el.value = this.state.gridWidth;
+              el.value = this.state.width;
               el.select();
             }}
           ></input>
@@ -1576,14 +1568,14 @@ export default class GameOfLife extends Component {
             min='0'
             max='10'
             step='1'
-            value={this.state.pixelSpace * 2}
+            value={this.state.pxMargin * 2}
             onChange={e => this.changeLinesSize(e.target.value)}
             onClick={e => e.target.select()}
             onKeyDown={e => {
               const el = document.getElementById('inputMarginType');
               el.style.display = 'block';
               e.target.style.display = 'none';
-              el.value = this.state.gridWidth;
+              el.value = this.state.width;
               el.select();
             }}
           ></input>
@@ -1667,10 +1659,10 @@ export default class GameOfLife extends Component {
             className='inputColor'
             type='color'
             title='Backgorund Pixel Color'
-            value={this.state.backgroundPixleColor}
+            value={this.state.backgroundColor}
             onInput={e => {
-              this.setState({ backgroundPixleColor: e.target.value });
-              localStorage.setItem('backgroundPixleColor', e.target.value);
+              this.setState({ backgroundColor: e.target.value });
+              localStorage.setItem('backgroundColor', e.target.value);
             }}
           ></input>
           <p className='controlLabel'>Background</p>
@@ -1678,12 +1670,12 @@ export default class GameOfLife extends Component {
             className='inputColor'
             type='color'
             title='Between Pixels Color'
-            value={this.state.betweenPixleColor}
+            value={this.state.linesColor}
             onChange={e => {
-              this.setState({ betweenPixleColor: e.target.value }, () => {
+              this.setState({ linesColor: e.target.value }, () => {
                 this.drawGridLines(true);
               });
-              localStorage.setItem('betweenPixleColor', e.target.value);
+              localStorage.setItem('linesColor', e.target.value);
             }}
           ></input>
           <p className='controlLabel'>Grid Lines</p>
@@ -1691,11 +1683,11 @@ export default class GameOfLife extends Component {
             className='inputColor'
             type='color'
             title='Symmetry Lines Color'
-            value={this.state.SymmetryLinesColor}
+            value={this.state.SymColor}
             onChange={e => {
-              this.setState({ SymmetryLinesColor: e.target.value }, () => {
+              this.setState({ SymColor: e.target.value }, () => {
                 this.drawSym();
-                localStorage.setItem('SymmetryLinesColor', e.target.value);
+                localStorage.setItem('SymColor', e.target.value);
               });
             }}
           ></input>
@@ -1904,11 +1896,11 @@ export default class GameOfLife extends Component {
         <DownloadWindow
           pauseRender={this.pauseRender}
           renderLifeDeath={this.renderLifeDeath}
-          gridWidth={this.state.gridWidth}
-          gridHeight={this.state.gridHeight}
+          gridWidth={this.state.width}
+          gridHeight={this.state.height}
           pixelSize={this.state.pixelSize}
-          pixelSpace={this.state.pixelSpace}
-          bg={this.state.backgroundPixleColor}
+          pixelSpace={this.state.pxMargin}
+          bg={this.state.backgroundColor}
           resetRenderData={this.resetRenderData}
           checkColor={this.checkColorsBeforeRender}
           popUp={this.openPopUp}
@@ -2028,9 +2020,9 @@ export default class GameOfLife extends Component {
             }}
           >
             <p>
-              {this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize)} x{' '}
-              {this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize)} px /{' '}
-              {this.state.gridWidth * this.state.gridHeight} squares
+              {this.state.width * (this.state.pxMargin * 2 + this.state.pixelSize)} x{' '}
+              {this.state.height * (this.state.pxMargin * 2 + this.state.pixelSize)} px / {this.state.width * this.state.height}{' '}
+              squares
             </p>
           </div>
           <div
@@ -2069,13 +2061,13 @@ export default class GameOfLife extends Component {
             <canvas
               id='canvas'
               style={{
-                backgroundColor: this.state.backgroundPixleColor,
+                backgroundColor: this.state.backgroundColor,
               }}
             ></canvas>
             <canvas
               id='Hiddencanvas'
-              width={this.state.gridWidth * (this.state.pixelSpace * 2 + this.state.pixelSize)}
-              height={this.state.gridHeight * (this.state.pixelSpace * 2 + this.state.pixelSize)}
+              width={this.state.width * (this.state.pxMargin * 2 + this.state.pixelSize)}
+              height={this.state.height * (this.state.pxMargin * 2 + this.state.pixelSize)}
             ></canvas>
             <nav id='MouseHorizenLine'></nav>
             <nav id='MouseVerticalLine'></nav>
