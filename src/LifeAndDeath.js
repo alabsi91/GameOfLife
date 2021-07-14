@@ -9,16 +9,17 @@ import extractColors from 'extract-colors';
 import { requestNum } from 'request-animation-number';
 
 let interval, lastPaint, windowTop, windowLeft, isWindowOpened, panelsPos;
-// data from reading a loaded json file
+
+// data from reading a loaded json file.
 let extractedData;
-// undo redo data
+// undo redo data.
 let undo = [];
 let redo = [];
-// variabel to be use for shiftDraw
+// variabel to be use for straight draw (shiftDraw).
 let xPos, yPos, xDif, yDif, drawDir, dirElem;
-// use for copy colors from image layer to canvas when drawing
+// use for copy colors from image layer to canvas when drawing.
 let xColor, yColor;
-// store live pixels first time when play game of life animation
+// store live pixels first time when play game of life animation.
 let renderData;
 
 export default class GameOfLife extends Component {
@@ -68,8 +69,6 @@ export default class GameOfLife extends Component {
       this.grabGrid,
       this.grabSave,
       this.grabLoad,
-      this.grabPopUp,
-      this.grabDownload,
       this.grabPanel,
       this.grabGridPanel,
       this.grabColorPanel,
@@ -88,46 +87,12 @@ export default class GameOfLife extends Component {
 
     // drag and drop image files to browser
     this.dropImage();
+
+    // load default painting saves to the localStorage when there is none.
+    this.loadDefaultSaves();
   }
 
-  dropImage = () => {
-    const preventDefault = e => {
-      e.stopPropagation();
-      e.preventDefault();
-    };
-    // prevent browser on drag default behaviour
-    window.addEventListener('dragenter', preventDefault, false);
-    window.addEventListener('dragexit', preventDefault, false);
-    window.addEventListener('dragover', preventDefault, false);
-
-    window.addEventListener('drop', e => {
-      e.stopPropagation();
-      e.preventDefault();
-      const imgTag = document.getElementById('img');
-      // get droped data
-      const selectedFile = e.dataTransfer.files[0];
-      // check if the data is image
-      if (selectedFile?.type?.includes('image')) {
-        const reader = new FileReader();
-        imgTag.removeAttribute('style');
-        reader.onload = e => {
-          document.getElementById('imageLayer').style.display = 'block';
-          document.getElementById('colorPlateControlPanel').style.display = 'block';
-          imgTag.src = e.target.result;
-          // colors plate
-          extractColors(e.target.result, { saturationImportance: 0, splitPower: 5, distance: 0.1, pixels: 100 })
-            .then(e => {
-              this.setState({ colorPlate: e.map((c, i) => <ColorPlate key={i} color={c.hex} that={this} />) });
-            })
-            .catch(console.log);
-        };
-        reader.readAsDataURL(selectedFile);
-      } else {
-        this.openPopUp('Only Image files are acceptable');
-      }
-    });
-  };
-
+  // keyboard shourtcuts for undo, redo, erase, flood bucket, straight draw,
   keyboardShourtcuts = () => {
     window.addEventListener('keydown', e => {
       if (e.key === 'Shift') this.setState({ shiftPressed: true });
@@ -154,6 +119,8 @@ export default class GameOfLife extends Component {
     });
   };
 
+  // ----------------------------- undo / redo, last drawing methods  -----------------------------
+  // read previous canvas state from undo array and apply it, and push this state to redo array.
   undo = () => {
     const last = undo.length - 1;
     if (undo.length > 1) {
@@ -164,7 +131,7 @@ export default class GameOfLife extends Component {
       });
     }
   };
-
+  // read canvas state from redo array and applay it, push this state back to undo array.
   redo = () => {
     if (redo.length > 0) {
       const last = redo.length - 1;
@@ -175,8 +142,7 @@ export default class GameOfLife extends Component {
       });
     }
   };
-
-  // push drawing data to undo array
+  // push canvas state to undo array, called every time canvas state is changed.
   registerUndo = () => {
     const width = this.state.width;
     const height = this.state.height;
@@ -184,419 +150,13 @@ export default class GameOfLife extends Component {
     const reg = [lives[0], lives[1], [width, height]];
     undo.push(reg);
   };
-
-  applyPattren = (patren, colors, pWidth, x, y) => {
-    this.drawCanvas(true);
-    const dif = this.state.width - pWidth;
-    const moveX = x ? ~~(this.state.width / 2) - x : 0;
-    const moveY = y ? ~~this.state.width * (~~(this.state.height / 2) - y) : 0;
-    const centre = moveX + moveY;
-
-    for (let i = 0; i < patren.length; i++) {
-      let div = Math.floor(patren[i] / pWidth) * dif;
-      this.toLive(patren[i] + div + centre, colors ? colors[i] : this.state.pixleColor);
-    }
-  };
-
-  symmetricalX = i => {
-    if (this.state.symmetricalX) {
-      const findRow = ~~(i / this.state.width) * this.state.width;
-      const middleRow = findRow + Math.floor(this.state.width / 2);
-      const findOp = Number.isInteger(this.state.width / 2) ? middleRow - (i - middleRow + 1) : middleRow - (i - middleRow);
-      if (this.state.eraser) {
-        this.toDeath(findOp);
-      } else {
-        this.toLive(findOp);
-      }
-    }
-  };
-
-  symmetricalY = i => {
-    if (this.state.symmetricalY) {
-      const findRow = ~~(i / this.state.width);
-      const findMiddle = Math.floor(this.state.height / 2);
-      const findDef = findMiddle - findRow;
-      const findOp = Number.isInteger(this.state.height / 2)
-        ? i + findDef * this.state.width * 2 - this.state.width
-        : i + findDef * this.state.width * 2;
-      if (this.state.eraser) {
-        this.toDeath(findOp);
-      } else {
-        this.toLive(findOp);
-      }
-      return findOp;
-    }
-  };
-
-  appendCanvas = () => {
-    const canvas = document.getElementById('canvas');
-
-    this.drawCanvas();
-
-    const getSquare = (x, y) => {
-      const row = ~~(y / (this.state.pixelSize + this.state.pxMargin * 2));
-      const column = ~~(x / (this.state.pixelSize + this.state.pxMargin * 2));
-      const pos = row * this.state.width + column;
-      return pos;
-    };
-
-    const draw = e => {
-      const fromTop = canvas.getBoundingClientRect().top;
-      const fromLeft = canvas.getBoundingClientRect().left;
-      const square = getSquare(e.clientX - fromLeft, e.clientY - fromTop);
-
-      this.paintBuc(square);
-      if (!this.state.paintBuc) {
-        if (this.state.eraser) {
-          this.toDeath(square);
-        } else {
-          this.toLive(square);
-          this.imageColorPic(e);
-        }
-
-        this.symmetricalX(square);
-        this.symmetricalY(square);
-
-        if (this.state.symmetricalY && this.state.symmetricalX && !this.state.shiftPressed)
-          this.symmetricalX(this.symmetricalY(square));
-      }
-    };
-
-    const shiftDraw = e => {
-      const fromTop = canvas.getBoundingClientRect().top;
-      const fromLeft = canvas.getBoundingClientRect().left;
-      const square = getSquare(e.clientX - fromLeft, e.clientY - fromTop);
-      if (!dirElem) dirElem = square;
-      xPos = e.x;
-      yPos = e.y;
-      window.addEventListener('mousemove', this.shiftDraw);
-    };
-
-    canvas.addEventListener('mousedown', e => {
-      if (!this.state.isPlaying) {
-        draw(e);
-        if (this.state.shiftPressed && !this.state.paintBuc) {
-          shiftDraw(e);
-        } else canvas.addEventListener('mousemove', draw);
-      }
-    });
-    window.addEventListener('mouseup', () => {
-      canvas.removeEventListener('mousemove', draw);
-    });
-  };
-
-  drawCanvas = dontTranslate => {
-    const canvas = document.getElementById('canvas');
-    const [width, height, margin, pxSize] = [this.state.width, this.state.height, this.state.pxMargin, this.state.pixelSize];
-
-    canvas.width = width * (margin * 2 + pxSize);
-    canvas.height = height * (margin * 2 + pxSize);
-    const ctx = canvas.getContext('2d');
-
-    if (margin !== 0) ctx.translate(0.5, 0.5);
-
-    this.drawGridLines(dontTranslate);
-  };
-
-  drawSym = () => {
-    const [canvas, width, height, margin, pxSize, symColor] = [
-      document.getElementById('Hiddencanvas'),
-      this.state.width,
-      this.state.height,
-      this.state.pxMargin,
-      this.state.pixelSize,
-      this.state.SymColor,
-    ];
-    const ctx = canvas.getContext('2d');
-
-    ctx.fillStyle = symColor;
-
-    if (width % 2 !== 0) {
-      ctx.fillRect(canvas.width / 2 - (pxSize / 2 + margin * 2), 0, margin * 2, canvas.height);
-      ctx.fillRect(canvas.width / 2 + pxSize / 2, 0, margin * 2, canvas.height);
-      ctx.fillRect(canvas.width / 2 - (pxSize / 2 + margin * 2), 0, pxSize + margin * 4, margin);
-      for (let i = pxSize + margin; i < canvas.height; i = i + pxSize + margin * 2) {
-        ctx.fillRect(canvas.width / 2 - (pxSize / 2 + margin * 2), i, pxSize + margin * 4, margin * 2);
-      }
-    } else ctx.fillRect(canvas.width / 2 - margin, 0, margin * 2, canvas.height);
-
-    if (height % 2 !== 0) {
-      ctx.fillRect(0, canvas.height / 2 - (pxSize / 2 + margin * 2), canvas.width, margin * 2);
-      ctx.fillRect(0, canvas.height / 2 + pxSize / 2, canvas.width, margin * 2);
-      ctx.fillRect(0, canvas.height / 2 - pxSize / 2 - margin * 2, margin, pxSize + margin * 4);
-      for (let i = pxSize + margin; i < canvas.width; i = i + pxSize + margin * 2) {
-        ctx.fillRect(i, canvas.height / 2 - pxSize / 2 - margin * 2, margin * 2, pxSize + margin * 4);
-      }
-    } else ctx.fillRect(0, canvas.height / 2 - margin, canvas.width, margin * 2);
-  };
-
-  drawGridLines = dontTranslate => {
-    const [canvas, width, height, margin, pxSize, linesColor] = [
-      document.getElementById('Hiddencanvas'),
-      this.state.width,
-      this.state.height,
-      this.state.pxMargin,
-      this.state.pixelSize,
-      this.state.linesColor,
-    ];
-    const ctx = canvas.getContext('2d');
-    if (margin !== 0 && !dontTranslate) ctx.translate(0.5, 0.5);
-
-    ctx.fillStyle = linesColor;
-    for (let i = 0; i <= width + 1; i++) {
-      const x = i * (pxSize + margin * 2) - margin;
-      ctx.fillRect(x, 0, margin * 2, canvas.height);
-    }
-    for (let i = 0; i <= height + 1; i++) {
-      const y = i * (pxSize + margin * 2) - margin;
-      ctx.fillRect(0, y, canvas.width, margin * 2);
-    }
-    this.drawSym();
-  };
-
-  toLive = (p, color) => {
-    const [canvas, pxSize] = [document.getElementById('canvas'), this.state.pixelSize];
-    const ctx = canvas.getContext('2d');
-    const pos = this.getPos(p);
-    ctx.fillStyle = color
-      ? color
-      : this.state.isRandomColor
-      ? // ? `hsla(0, 0%, ${Math.floor(Math.random() * (100 - 50 + 1) + 50)}%, 1)`
-        `hsla(${Math.random() * 360}, 100%, 40%, 1)`
-      : this.state.pixleColor;
-    ctx.fillRect(pos.x, pos.y, pxSize, pxSize);
-  };
-
-  toDeath = p => {
-    const [canvas, pxSize] = [document.getElementById('canvas'), this.state.pixelSize];
-    const ctx = canvas.getContext('2d');
-    const pos = this.getPos(p);
-    ctx.fillStyle = this.state.backgroundColor;
-    ctx.clearRect(pos.x, pos.y, pxSize, pxSize);
-  };
-
-  getPos = p => {
-    const [width, margin, pxSize] = [this.state.width, this.state.pxMargin, this.state.pixelSize];
-    const findRow = ~~(p / width);
-    const findColumn = p - findRow * width;
-    const x = findColumn * (pxSize + margin * 2) + margin;
-    const y = findRow * (pxSize + margin * 2) + margin;
-    return { x: x, y: y };
-  };
-
-  changePixelSize = newSize => {
-    const width = this.state.width * (this.state.pxMargin * 2 + newSize);
-    const height = this.state.height * (this.state.pxMargin * 2 + newSize);
-    newSize = width > 10000 || height > 10000 ? this.state.pixelSize : newSize;
-    if (Number(newSize) && this.state.pixelSize !== newSize) {
-      newSize = Number(newSize) < 1 ? 1 : Number(newSize);
-      const live = this.getLivePixels();
-      this.setState({ pixelSize: Number(newSize) }, () => {
-        this.drawCanvas();
-        live[0].forEach((e, i) => this.toLive(e, live[1][i]));
-        localStorage.setItem('pixelSize', Number(newSize));
-      });
-    }
-  };
-
-  changeGridWidth = newWidth => {
-    if (Number(newWidth)) {
-      newWidth = Number(newWidth) > 1000 ? 1000 : Number(newWidth) < 5 ? 5 : Number(newWidth);
-      const live = this.getLivePixels();
-      const pWidth = this.state.width;
-      this.setState({ width: newWidth }, () => {
-        this.drawCanvas();
-        this.applyPattren(live[0], live[1], pWidth);
-        this.registerUndo();
-        localStorage.setItem('width', newWidth);
-      });
-    }
-  };
-
-  changeGridHeight = newHeight => {
-    if (Number(newHeight)) {
-      newHeight = Number(newHeight) > 1000 ? 1000 : Number(newHeight) < 5 ? 5 : Number(newHeight);
-      const live = this.getLivePixels();
-      this.setState({ height: newHeight }, () => {
-        this.drawCanvas();
-        live[0].forEach((e, i) => {
-          this.toLive(e, live[1][i]);
-        });
-        this.registerUndo();
-        localStorage.setItem('height', newHeight);
-      });
-    }
-  };
-
-  changeLinesSize = newSize => {
-    newSize = Number(newSize) > 10 ? 10 : Number(newSize);
-    if (Number(newSize) !== null) {
-      const live = this.getLivePixels();
-      this.setState({ pxMargin: Number(newSize / 2) }, () => {
-        this.drawCanvas();
-        live[0].forEach((e, i) => this.toLive(e, live[1][i]));
-        localStorage.setItem('pxMargin', Number(newSize / 2));
-      });
-    }
-  };
-
-  getLivePixels = () => {
-    const [canvas, width, height, margin, pxSize] = [
-      document.getElementById('canvas'),
-      this.state.width,
-      this.state.height,
-      this.state.pxMargin,
-      this.state.pixelSize,
-    ];
-
-    const ctx = canvas.getContext('2d');
-    const ctxData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-
-    const checkLive = p => {
-      const findRow = ~~(p / width);
-      const findColumn = p - findRow * width;
-      const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
-      const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
-
-      const red = y * (canvas.width * 4) + x * 4;
-      const color = this.RGBToHex(ctxData[red], ctxData[red + 1], ctxData[red + 2]);
-      const isLive = ctxData[red + 3] / 255 !== 0;
-      return { is: isLive, color: color };
-    };
-
-    let lives = [[], []];
-    for (let i = 0; i < width * height; i++) {
-      const check = checkLive(i);
-      if (check.is) {
-        lives[0].push(i);
-        lives[1].push(check.color);
-      }
-    }
-    return lives;
-  };
-
-  checkLive = p => {
-    const [canvas, width, margin, pxSize] = [
-      document.getElementById('canvas'),
-      this.state.width,
-      this.state.pxMargin,
-      this.state.pixelSize,
-    ];
-    const ctx = canvas.getContext('2d');
-    const findRow = ~~(p / width);
-    const findColumn = p - findRow * width;
-    const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
-    const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
-
-    const data = ctx.getImageData(x, y, 1, 1).data;
-    const color = this.RGBToHex(data[0], data[1], data[2]);
-    const isLive = data[3] / 255 !== 0;
-    return { is: isLive, color: color };
-  };
-
-  checkGameRules = (i, isLive) => {
-    let livePixels = 0;
-    const [width, height] = [this.state.width, this.state.height];
-    const firstPixle = Number.isInteger(i / width);
-    const lastPixle = Number.isInteger((i + 1) / width);
-
-    const checkNeighbours = n => {
-      if (n >= 0 && n < width * height && renderData.has(n)) livePixels++;
-    };
-
-    if (!lastPixle) checkNeighbours(i + 1);
-    if (!firstPixle) checkNeighbours(i - 1);
-    checkNeighbours(i + width);
-    if (!lastPixle) checkNeighbours(i + width + 1);
-    if (!firstPixle) checkNeighbours(i + width - 1);
-    checkNeighbours(i - width);
-    if (!lastPixle) checkNeighbours(i - width + 1);
-    if (!firstPixle) checkNeighbours(i - width - 1);
-
-    if (isLive) {
-      // Any live cell with fewer than two live neighbours dies, as if by underpopulation
-      if (livePixels < 2) {
-        return false;
-        // Any live cell with two or three live neighbours lives on to the next generation.
-      } else if (livePixels === 2 || livePixels === 3) {
-        return true;
-        // Any live cell with more than three live neighbours dies, as if by overpopulation.
-      } else if (livePixels > 3) {
-        return false;
-      }
-      // Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
-    } else if (livePixels === 3) {
-      return true;
-    }
-  };
-
-  play = () => {
-    if (this.state.pixleColor === this.state.backgroundColor) {
-      this.openPopUp('Drawing color and background color should not be the same');
-    } else if (!this.state.isPlaying) {
-      this.setState({ isPlaying: true });
-      if (!this.state.isPaused) this.saveLastPaint();
-
-      renderData = new Set(this.getLivePixels()[0]);
-      interval = setInterval(() => this.renderLifeDeath(), this.state.speed);
-    } else this.pauseRender();
-  };
-
-  renderLifeDeath = record => {
-    const width = this.state.width;
-    const height = this.state.height;
-    const toLive = [];
-    const toDeath = [];
-    const foundDead = new Set();
-
-    const checkForDead = n => {
-      if (n >= 0 && n < width * height && !renderData.has(n)) foundDead.add(n);
-    };
-
-    if (record && !renderData) renderData = new Set(this.getLivePixels()[0]);
-
-    renderData.forEach(e => {
-      checkForDead(e + 1);
-      checkForDead(e - 1);
-      checkForDead(e + width);
-      checkForDead(e + width + 1);
-      checkForDead(e + width - 1);
-      checkForDead(e - width);
-      checkForDead(e - width + 1);
-      checkForDead(e - width - 1);
-    });
-
-    renderData.forEach(i => (this.checkGameRules(i, true) ? toLive.push(i) : toDeath.push(i)));
-    foundDead.forEach(i => (this.checkGameRules(i, false) ? toLive.push(i) : toDeath.push(i)));
-
-    for (let i = 0; i < toLive.length; i++) {
-      if (this.state.maintainColorPlay) {
-        const index = lastPaint[0].indexOf(toLive[i]);
-        index !== -1 ? this.toLive(toLive[i], lastPaint[1][index]) : this.toLive(toLive[i]);
-      } else this.toLive(toLive[i]);
-      renderData.add(toLive[i]);
-    }
-
-    for (let i = 0; i < toDeath.length; i++) {
-      renderData.delete(toDeath[i]);
-      this.toDeath(toDeath[i]);
-    }
-  };
-
-  pauseRender = () => {
-    if (this.state.isPlaying) {
-      clearInterval(interval);
-      this.setState({ isPlaying: false, isPaused: true });
-      renderData = null;
-    }
-  };
-
+  // read canvas state and set it to localStorage and to "lastPaint" global variable.
   saveLastPaint = () => {
     const lives = this.getLivePixels();
     lastPaint = [lives[0], lives[1], [this.state.width, this.state.height]];
     localStorage.setItem('lastPaint', JSON.stringify(lastPaint));
   };
-
+  // apply last drawing to canvas.
   renderLast = () => {
     clearInterval(interval);
     this.setState({ isPlaying: false, isPaused: false });
@@ -623,243 +183,40 @@ export default class GameOfLife extends Component {
       }
     } else this.openPopUp('Last Paint Not found');
   };
+  // --------------------------------------------------------------------------------------------------------------------
 
-  trackMouse = l => {
-    const container = document.getElementById('lifeDeathContainer');
-    const eraser = document.getElementById('eraserTrack');
-    const bucket = document.getElementById('bucketTrack');
-    const top = container.getBoundingClientRect().top;
-    const left = container.getBoundingClientRect().left;
-    const y = l.pageY - top - window.scrollY;
-    const x = l.pageX - left - window.scrollX;
-    document.getElementById('MouseHorizenLine').style.top = `${y - 1}px`;
-    document.getElementById('MouseVerticalLine').style.left = `${x - 1}px`;
-    eraser.style.top = `${y - 24}px`;
-    eraser.style.left = `${x + 4}px`;
-    bucket.style.top = `${y - 24}px`;
-    bucket.style.left = `${x - 24}px`;
-  };
-
-  stickyGrapHandle = (l, el) => {
-    const grabEl = document.getElementById(el);
-    const height = parseInt(window.getComputedStyle(grabEl).height);
-    const width = parseInt(window.getComputedStyle(grabEl).width);
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
-    grabEl.style.left = `${l.pageX + windowLeft}px`;
-    panelsPos.forEach(e => {
-      const recLeft = grabEl.getBoundingClientRect().left + window.scrollX;
-      const recRight = grabEl.getBoundingClientRect().right + window.scrollX;
-      if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY >= e[1] && l.pageY <= e[1] + 20) {
-        grabEl.style.top = `${e[1]}px`;
-        grabEl.style.left = `${e[0]}px`;
-      } else if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY + height <= e[3] + 20 && l.pageY + height >= e[3]) {
-        grabEl.style.top = `${e[3] - height}px`;
-        grabEl.style.left = `${e[0]}px`;
-      } else if (recLeft >= e[2] - 10 && recLeft <= e[2] + 10) {
-        if (l.pageY >= e[3] && l.pageY <= e[3] + 20) grabEl.style.top = `${e[3]}px`;
-        grabEl.style.left = `${e[2]}px`;
-      } else if (recRight >= e[0] - 10 && recRight <= e[0]) {
-        if (l.pageY >= e[3] && l.pageY <= e[3] + 20) grabEl.style.top = `${e[3]}px`;
-        grabEl.style.left = `${e[0] - width}px`;
+  // ----------------------------- Drawing tools: Symmetrical, Straight line, Foold bucket  -----------------------------
+  // takes a square id and (draw or erase) that square's opposite on the X axis.
+  symmetricalX = i => {
+    if (this.state.symmetricalX) {
+      const findRow = ~~(i / this.state.width) * this.state.width;
+      const middleRow = findRow + Math.floor(this.state.width / 2);
+      const findOp = Number.isInteger(this.state.width / 2) ? middleRow - (i - middleRow + 1) : middleRow - (i - middleRow);
+      if (this.state.eraser) {
+        this.toDeath(findOp);
+      } else {
+        this.toLive(findOp);
       }
-    });
-  };
-
-  grabPanel = l => this.stickyGrapHandle(l, 'controlPanel');
-  grabGridPanel = l => this.stickyGrapHandle(l, 'gridControlPanel');
-  grabColorPanel = l => this.stickyGrapHandle(l, 'colorControlPanel');
-  grabSavePanel = l => this.stickyGrapHandle(l, 'saveControlPanel');
-  grabMovePanel = l => this.stickyGrapHandle(l, 'moveControlPanel');
-  grabColorPlate = l => this.stickyGrapHandle(l, 'colorPlateControlPanel');
-
-  grabWindowHandel = (l, el) => {
-    l.preventDefault();
-    const grabEl = document.getElementById(el);
-    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
-    grabEl.style.left = `${l.pageX + windowLeft}px`;
-  };
-  grabGrid = l => this.grabWindowHandel(l, 'windowContainer');
-  grabSave = l => this.grabWindowHandel(l, 'saveWindow');
-  grabLoad = l => this.grabWindowHandel(l, 'loadWindow');
-  grabConfirm = l => this.grabWindowHandel(l, 'confirmWindow');
-
-  copyToClipBoard = () => {
-    this.pauseRender();
-    this.mergeCanvses(false).toBlob(e => {
-      navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
-        if (result.state === 'granted' || result.state === 'prompt') {
-          // eslint-disable-next-line no-undef
-          navigator.clipboard.write([new ClipboardItem({ 'image/png': e })]);
-        }
-      });
-    }, 'image/png');
-  };
-
-  toggleWindowHandle = el => {
-    const winEl = document.getElementById(el);
-    const blured = document.getElementById('blured');
-    const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
-    if (isOpen) {
-      requestNum({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
-        blured.style.opacity = s;
-        if (s === 0) {
-          winEl.style.display = 'none';
-          blured.style.display = 'none';
-        }
-      });
-      isWindowOpened = false;
-    } else {
-      winEl.style.display = 'initial';
-      blured.style.display = 'block';
-      requestNum({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
-        blured.style.opacity = s;
-      });
-      isWindowOpened = true;
     }
   };
-  toggleConfirmWindow = () => {
-    const winEl = document.getElementById('confirmWindow');
-    const blured = document.getElementById('blured');
-    const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
-    if (isOpen) {
-      requestNum({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
-        blured.style.opacity = s;
-        if (s === 0) {
-          winEl.style.display = 'none';
-          blured.style.display = 'none';
-        }
-      });
-      isWindowOpened = false;
-      document.getElementById('getData').value = '';
-    } else {
-      winEl.style.display = 'initial';
-      blured.style.display = 'block';
-      requestNum({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
-        winEl.style.transform = `scale(${s})`;
-        blured.style.opacity = s;
-      });
-      isWindowOpened = true;
-    }
-  };
-  toggleSaveWindow = () => this.toggleWindowHandle('saveWindow');
-  toggleLoadWindow = () => {
-    document.querySelectorAll(`.loadCard`).forEach(e => e.removeAttribute('style'));
-    this.setState(() => ({ loadCards: this.renderLoadCards() }));
-    this.toggleWindowHandle('loadWindow');
-  };
-  toggleDownloadWindow = () => this.toggleWindowHandle('downloadWindow');
-  togglePopUp = () => this.toggleWindowHandle('popUp');
-
-  openPopUp = t => {
-    const textEl = document.getElementById('popUpText');
-    textEl.innerHTML = t;
-    this.togglePopUp();
-  };
-
-  saveDrawing = () => {
-    this.pauseRender();
-    const buttons = document.querySelectorAll('#saveCancleContainer button');
-    const lives = this.getLivePixels();
-    buttons.forEach(e => (e.disabled = true));
-    const newSave = {
-      livePixels: lives[0],
-      pixelsColors: lives[1],
-      savingName: document.getElementById('saveName').value,
-      drawngImg: '',
-      saveSettings: [this.state.width, this.state.height, this.state.pixelSize, this.state.pxMargin, this.state.backgroundColor],
-    };
-    const dataURL = this.mergeCanvses(false).toDataURL('image/png');
-    newSave.drawngImg = dataURL;
-    if (localStorage.getItem('saved')) {
-      const saved = JSON.parse(localStorage.getItem('saved'));
-      saved.push(newSave);
-      localStorage.setItem('saved', JSON.stringify(saved));
-    } else {
-      localStorage.setItem('saved', JSON.stringify([newSave]));
-    }
-    buttons.forEach(e => (e.disabled = false));
-    this.toggleSaveWindow();
-  };
-
-  renderLoadCards = () =>
-    JSON.parse(localStorage.getItem('saved'))?.map((e, i) => (
-      <LoadCards
-        loadHandle={() => this.loadSaves(i)}
-        removeSaveHandle={e => this.removeSave(e, i)}
-        exportSaveHandle={ev => this.exportSelectedData(ev, i, e.savingName)}
-        img={e.drawngImg}
-        name={e.savingName}
-        width={e.saveSettings[0]}
-        height={e.saveSettings[1]}
-        loadsKeys={i}
-        key={i}
-      ></LoadCards>
-    ));
-
-  loadSaves = i => {
-    this.pauseRender();
-    const saved = JSON.parse(localStorage.getItem('saved'));
-    this.setState(
-      {
-        isPaused: false,
-        width: saved[i].saveSettings[0],
-        height: saved[i].saveSettings[1],
-        pixelSize: saved[i].saveSettings[2],
-        pxMargin: saved[i].saveSettings[3],
-        backgroundColor: saved[i].saveSettings[4],
-      },
-      () => {
-        localStorage.setItem('width', saved[i].saveSettings[0]);
-        localStorage.setItem('height', saved[i].saveSettings[1]);
-        localStorage.setItem('pixelSize', saved[i].saveSettings[2]);
-        localStorage.setItem('pxMargin', saved[i].saveSettings[3]);
-        localStorage.setItem('backgroundColor', saved[i].saveSettings[4]);
-        this.applyPattren(saved[i].livePixels, saved[i].pixelsColors, saved[i].saveSettings[0]);
-        this.saveLastPaint();
-        this.toggleLoadWindow();
-        undo = [];
-        redo = [];
-        this.registerUndo();
+  // takes a square id and (draw or erase) that square's opposite on the Y axis. and returns the opposite square id.
+  symmetricalY = i => {
+    if (this.state.symmetricalY) {
+      const findRow = ~~(i / this.state.width);
+      const findMiddle = Math.floor(this.state.height / 2);
+      const findDef = findMiddle - findRow;
+      const findOp = Number.isInteger(this.state.height / 2)
+        ? i + findDef * this.state.width * 2 - this.state.width
+        : i + findDef * this.state.width * 2;
+      if (this.state.eraser) {
+        this.toDeath(findOp);
+      } else {
+        this.toLive(findOp);
       }
-    );
+      return findOp;
+    }
   };
-
-  removeSave = (e, i) => {
-    e.stopPropagation();
-    const saved = JSON.parse(localStorage.getItem('saved'));
-    saved.splice(i, 1);
-    saved.length === 0 ? localStorage.removeItem('saved') : localStorage.setItem('saved', JSON.stringify(saved));
-    saved.length === 0
-      ? (document.getElementById('noLoads').style.display = 'block')
-      : (document.getElementById('noLoads').style.display = 'none');
-    this.setState(() => ({ loadCards: this.renderLoadCards() }));
-  };
-
-  findPanelsPos = id => {
-    const panels = [
-      'controlPanel',
-      'gridControlPanel',
-      'colorControlPanel',
-      'saveControlPanel',
-      'moveControlPanel',
-      'colorPlateControlPanel',
-    ];
-    panels.splice(
-      panels.findIndex(e => e === id),
-      1
-    );
-    const pos = panels.map(e => [
-      document.getElementById(e).getBoundingClientRect().left + window.scrollX,
-      document.getElementById(e).getBoundingClientRect().bottom + window.scrollY,
-      document.getElementById(e).getBoundingClientRect().right + window.scrollX,
-      document.getElementById(e).getBoundingClientRect().top + window.scrollY,
-    ]);
-    panelsPos = pos;
-  };
-
+  // flood paint bucket
   paintBuc = i => {
     // credit to http://www.williammalone.com/articles/html5-canvas-javascript-paint-bucket-tool/
     if (this.state.paintBuc) {
@@ -947,39 +304,26 @@ export default class GameOfLife extends Component {
       }
     }
   };
+  // change the drawing position inside the canvas (up,down,left,right), square per press.
+  moveGrid = dir => {
+    this.registerUndo();
+    const width = this.state.width;
+    const lives = this.getLivePixels();
+    let row = lives[0];
+    let colors = lives[1];
 
-  exportData = () => {
-    const myData = localStorage.getItem('saved');
-    const myblob = new Blob([myData], { type: 'application/json' });
-    saveAs(myblob, 'saved-drawings', { type: 'application/json' });
+    this.drawCanvas(true);
+    if (dir === 'up') {
+      row.forEach((e, x) => this.toLive(e - width, colors[x]));
+    } else if (dir === 'down') {
+      row.forEach((e, x) => this.toLive(e + width, colors[x]));
+    } else if (dir === 'left') {
+      row.forEach((e, x) => this.toLive(e - 1, colors[x]));
+    } else if (dir === 'right') {
+      row.forEach((e, x) => this.toLive(e + 1, colors[x]));
+    }
   };
-
-  exportSelectedData = (e, i, name) => {
-    e.stopPropagation();
-    const saved = JSON.parse(localStorage.getItem('saved'));
-    const toExport = JSON.stringify([saved[i]]);
-    const myblob = new Blob([toExport], { type: 'application/json' });
-    saveAs(myblob, name, { type: 'application/json' });
-  };
-
-  confirmAdd = () => {
-    const LocalData = localStorage.getItem('saved');
-    if (LocalData) {
-      const oldData = JSON.parse(LocalData);
-      const imported = JSON.parse(extractedData);
-      oldData.push(...imported);
-      localStorage.setItem('saved', JSON.stringify(oldData));
-      this.toggleLoadWindow();
-    } else this.openPopUp('Old data not found');
-    this.toggleConfirmWindow();
-  };
-
-  confirmReplace = () => {
-    localStorage.setItem('saved', extractedData);
-    this.toggleConfirmWindow();
-    this.toggleLoadWindow();
-  };
-
+  // draw in a straight line when shift key is pressed.
   shiftDraw = e => {
     const [width, margin, pxSize, eraser, symX, symY] = [
       this.state.width,
@@ -1022,32 +366,727 @@ export default class GameOfLife extends Component {
       dirElem = dirElem + width;
     }
   };
-
+  // set mouse movment diriction to "drawDir" global variable, intiated in mousemove event, to be use in "shiftDraw".
   getMouseDir = e => {
     if (!drawDir) {
       drawDir = e.movementY < 0 || e.movementY > 0 ? 'y' : e.movementX < 0 || e.movementX > 0 ? 'x' : false;
     }
   };
+  // --------------------------------------------------------------------------------------------------------------------
 
-  moveGrid = dir => {
-    this.registerUndo();
-    const width = this.state.width;
-    const lives = this.getLivePixels();
-    let row = lives[0];
-    let colors = lives[1];
+  // ----------------------------- Create new canvas tools  -----------------------------
+  // intiat new canvas and add drawing's tools events listeners to it.
+  appendCanvas = () => {
+    const canvas = document.getElementById('canvas');
 
+    this.drawCanvas();
+
+    const getSquare = (x, y) => {
+      const row = ~~(y / (this.state.pixelSize + this.state.pxMargin * 2));
+      const column = ~~(x / (this.state.pixelSize + this.state.pxMargin * 2));
+      const pos = row * this.state.width + column;
+      return pos;
+    };
+
+    const draw = e => {
+      const fromTop = canvas.getBoundingClientRect().top;
+      const fromLeft = canvas.getBoundingClientRect().left;
+      const square = getSquare(e.clientX - fromLeft, e.clientY - fromTop);
+
+      this.paintBuc(square);
+      if (!this.state.paintBuc) {
+        if (this.state.eraser) {
+          this.toDeath(square);
+        } else {
+          this.toLive(square);
+          this.imageColorPic(e);
+        }
+
+        this.symmetricalX(square);
+        this.symmetricalY(square);
+
+        if (this.state.symmetricalY && this.state.symmetricalX && !this.state.shiftPressed)
+          this.symmetricalX(this.symmetricalY(square));
+      }
+    };
+
+    const shiftDraw = e => {
+      const fromTop = canvas.getBoundingClientRect().top;
+      const fromLeft = canvas.getBoundingClientRect().left;
+      const square = getSquare(e.clientX - fromLeft, e.clientY - fromTop);
+      if (!dirElem) dirElem = square;
+      xPos = e.x;
+      yPos = e.y;
+      window.addEventListener('mousemove', this.shiftDraw);
+    };
+
+    canvas.addEventListener('mousedown', e => {
+      if (!this.state.isPlaying) {
+        draw(e);
+        if (this.state.shiftPressed && !this.state.paintBuc) {
+          shiftDraw(e);
+        } else canvas.addEventListener('mousemove', draw);
+      }
+    });
+    window.addEventListener('mouseup', () => {
+      canvas.removeEventListener('mousemove', draw);
+    });
+  };
+  // draw an empty canvas with the grid properties.
+  drawCanvas = dontTranslate => {
+    const canvas = document.getElementById('canvas');
+    const [width, height, margin, pxSize] = [this.state.width, this.state.height, this.state.pxMargin, this.state.pixelSize];
+
+    canvas.width = width * (margin * 2 + pxSize);
+    canvas.height = height * (margin * 2 + pxSize);
+    const ctx = canvas.getContext('2d');
+
+    if (margin !== 0) ctx.translate(0.5, 0.5);
+
+    this.drawGridLines(dontTranslate);
+  };
+  // drew the X, Y Symmetrical lines
+  drawSym = () => {
+    const [canvas, width, height, margin, pxSize, symColor] = [
+      document.getElementById('Hiddencanvas'),
+      this.state.width,
+      this.state.height,
+      this.state.pxMargin,
+      this.state.pixelSize,
+      this.state.SymColor,
+    ];
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = symColor;
+
+    if (width % 2 !== 0) {
+      ctx.fillRect(canvas.width / 2 - (pxSize / 2 + margin * 2), 0, margin * 2, canvas.height);
+      ctx.fillRect(canvas.width / 2 + pxSize / 2, 0, margin * 2, canvas.height);
+      ctx.fillRect(canvas.width / 2 - (pxSize / 2 + margin * 2), 0, pxSize + margin * 4, margin);
+      for (let i = pxSize + margin; i < canvas.height; i = i + pxSize + margin * 2) {
+        ctx.fillRect(canvas.width / 2 - (pxSize / 2 + margin * 2), i, pxSize + margin * 4, margin * 2);
+      }
+    } else ctx.fillRect(canvas.width / 2 - margin, 0, margin * 2, canvas.height);
+
+    if (height % 2 !== 0) {
+      ctx.fillRect(0, canvas.height / 2 - (pxSize / 2 + margin * 2), canvas.width, margin * 2);
+      ctx.fillRect(0, canvas.height / 2 + pxSize / 2, canvas.width, margin * 2);
+      ctx.fillRect(0, canvas.height / 2 - pxSize / 2 - margin * 2, margin, pxSize + margin * 4);
+      for (let i = pxSize + margin; i < canvas.width; i = i + pxSize + margin * 2) {
+        ctx.fillRect(i, canvas.height / 2 - pxSize / 2 - margin * 2, margin * 2, pxSize + margin * 4);
+      }
+    } else ctx.fillRect(0, canvas.height / 2 - margin, canvas.width, margin * 2);
+  };
+  // drew grid - margin lines
+  drawGridLines = dontTranslate => {
+    const [canvas, width, height, margin, pxSize, linesColor] = [
+      document.getElementById('Hiddencanvas'),
+      this.state.width,
+      this.state.height,
+      this.state.pxMargin,
+      this.state.pixelSize,
+      this.state.linesColor,
+    ];
+    const ctx = canvas.getContext('2d');
+    if (margin !== 0 && !dontTranslate) ctx.translate(0.5, 0.5);
+
+    ctx.fillStyle = linesColor;
+    for (let i = 0; i <= width + 1; i++) {
+      const x = i * (pxSize + margin * 2) - margin;
+      ctx.fillRect(x, 0, margin * 2, canvas.height);
+    }
+    for (let i = 0; i <= height + 1; i++) {
+      const y = i * (pxSize + margin * 2) - margin;
+      ctx.fillRect(0, y, canvas.width, margin * 2);
+    }
+    this.drawSym();
+  };
+  // --------------------------------------------------------------------------------------------------------------------
+
+  // ----------------------------- Life and death methods  -----------------------------
+  // draw a square, takes the square id , color is optional.
+  toLive = (p, color) => {
+    const [canvas, pxSize] = [document.getElementById('canvas'), this.state.pixelSize];
+    const ctx = canvas.getContext('2d');
+    const pos = this.getPos(p);
+    ctx.fillStyle = color
+      ? color
+      : this.state.isRandomColor
+      ? // ? `hsla(0, 0%, ${Math.floor(Math.random() * (100 - 50 + 1) + 50)}%, 1)`
+        `hsla(${Math.random() * 360}, 100%, 40%, 1)`
+      : this.state.pixleColor;
+    ctx.fillRect(pos.x, pos.y, pxSize, pxSize);
+  };
+  // erease a square, takes the square id
+  toDeath = p => {
+    const [canvas, pxSize] = [document.getElementById('canvas'), this.state.pixelSize];
+    const ctx = canvas.getContext('2d');
+    const pos = this.getPos(p);
+    ctx.fillStyle = this.state.backgroundColor;
+    ctx.clearRect(pos.x, pos.y, pxSize, pxSize);
+  };
+  // returns a position (x,y) on the canvas for a square, takes the square id
+  getPos = p => {
+    const [width, margin, pxSize] = [this.state.width, this.state.pxMargin, this.state.pixelSize];
+    const findRow = ~~(p / width);
+    const findColumn = p - findRow * width;
+    const x = findColumn * (pxSize + margin * 2) + margin;
+    const y = findRow * (pxSize + margin * 2) + margin;
+    return { x: x, y: y };
+  };
+  // returns all live squares ids and there's colors
+  getLivePixels = () => {
+    const [canvas, width, height, margin, pxSize] = [
+      document.getElementById('canvas'),
+      this.state.width,
+      this.state.height,
+      this.state.pxMargin,
+      this.state.pixelSize,
+    ];
+
+    const ctx = canvas.getContext('2d');
+    const ctxData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+    const checkLive = p => {
+      const findRow = ~~(p / width);
+      const findColumn = p - findRow * width;
+      const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
+      const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
+
+      const red = y * (canvas.width * 4) + x * 4;
+      const color = this.RGBToHex(ctxData[red], ctxData[red + 1], ctxData[red + 2]);
+      const isLive = ctxData[red + 3] / 255 !== 0;
+      return { is: isLive, color: color };
+    };
+
+    let lives = [[], []];
+    for (let i = 0; i < width * height; i++) {
+      const check = checkLive(i);
+      if (check.is) {
+        lives[0].push(i);
+        lives[1].push(check.color);
+      }
+    }
+    return lives;
+  };
+  // returns a boolean of square state (live or dead) and the square's color, takes square id.
+  checkLive = p => {
+    const [canvas, width, margin, pxSize] = [
+      document.getElementById('canvas'),
+      this.state.width,
+      this.state.pxMargin,
+      this.state.pixelSize,
+    ];
+    const ctx = canvas.getContext('2d');
+    const findRow = ~~(p / width);
+    const findColumn = p - findRow * width;
+    const x = ~~(findColumn * (pxSize + margin * 2) + margin + pxSize / 2);
+    const y = ~~(findRow * (pxSize + margin * 2) + margin + pxSize / 2);
+
+    const data = ctx.getImageData(x, y, 1, 1).data;
+    const color = this.RGBToHex(data[0], data[1], data[2]);
+    const isLive = data[3] / 255 !== 0;
+    return { is: isLive, color: color };
+  };
+  // draw a pattren (live squares), and calculate new square position looking to old and new grid width.
+  applyPattren = (patren, colors, pWidth, x, y) => {
     this.drawCanvas(true);
-    if (dir === 'up') {
-      row.forEach((e, x) => this.toLive(e - width, colors[x]));
-    } else if (dir === 'down') {
-      row.forEach((e, x) => this.toLive(e + width, colors[x]));
-    } else if (dir === 'left') {
-      row.forEach((e, x) => this.toLive(e - 1, colors[x]));
-    } else if (dir === 'right') {
-      row.forEach((e, x) => this.toLive(e + 1, colors[x]));
+    const dif = this.state.width - pWidth;
+    const moveX = x ? ~~(this.state.width / 2) - x : 0;
+    const moveY = y ? ~~this.state.width * (~~(this.state.height / 2) - y) : 0;
+    const centre = moveX + moveY;
+
+    for (let i = 0; i < patren.length; i++) {
+      let div = Math.floor(patren[i] / pWidth) * dif;
+      this.toLive(patren[i] + div + centre, colors ? colors[i] : this.state.pixleColor);
     }
   };
+  // --------------------------------------------------------------------------------------------------------------------
 
+  // ----------------------------- Change grid properties: width, height, pixel size, lines width -----------------------------
+  // change pixel size, draw an empty canvas, applay the painting, save the setting to localStorage.
+  changePixelSize = newSize => {
+    const width = this.state.width * (this.state.pxMargin * 2 + newSize);
+    const height = this.state.height * (this.state.pxMargin * 2 + newSize);
+    newSize = width > 10000 || height > 10000 ? this.state.pixelSize : newSize;
+    if (Number(newSize) && this.state.pixelSize !== newSize) {
+      newSize = Number(newSize) < 1 ? 1 : Number(newSize);
+      const live = this.getLivePixels();
+      this.setState({ pixelSize: Number(newSize) }, () => {
+        this.drawCanvas();
+        live[0].forEach((e, i) => this.toLive(e, live[1][i]));
+        localStorage.setItem('pixelSize', Number(newSize));
+      });
+    }
+  };
+  // change the gird width, draw an empty canvas, calculate and applay the painting, save the setting to localStorage.
+  changeGridWidth = newWidth => {
+    if (Number(newWidth)) {
+      newWidth = Number(newWidth) > 1000 ? 1000 : Number(newWidth) < 5 ? 5 : Number(newWidth);
+      const live = this.getLivePixels();
+      const pWidth = this.state.width;
+      this.setState({ width: newWidth }, () => {
+        this.drawCanvas();
+        this.applyPattren(live[0], live[1], pWidth);
+        this.registerUndo();
+        localStorage.setItem('width', newWidth);
+      });
+    }
+  };
+  // change the gird height, draw an empty canvas, applay the painting, save the setting to localStorage.
+  changeGridHeight = newHeight => {
+    if (Number(newHeight)) {
+      newHeight = Number(newHeight) > 1000 ? 1000 : Number(newHeight) < 5 ? 5 : Number(newHeight);
+      const live = this.getLivePixels();
+      this.setState({ height: newHeight }, () => {
+        this.drawCanvas();
+        live[0].forEach((e, i) => {
+          this.toLive(e, live[1][i]);
+        });
+        this.registerUndo();
+        localStorage.setItem('height', newHeight);
+      });
+    }
+  };
+  // change the gird lines (margin) width, draw an empty canvas, applay the painting, save the setting to localStorage.
+  changeLinesSize = newSize => {
+    newSize = Number(newSize) > 10 ? 10 : Number(newSize);
+    if (Number(newSize) !== null) {
+      const live = this.getLivePixels();
+      this.setState({ pxMargin: Number(newSize / 2) }, () => {
+        this.drawCanvas();
+        live[0].forEach((e, i) => this.toLive(e, live[1][i]));
+        localStorage.setItem('pxMargin', Number(newSize / 2));
+      });
+    }
+  };
+  // --------------------------------------------------------------------------------------------------------------------
+
+  // ----------------------------- Play game of life -----------------------------
+  // returns a boolean that determain if the given square should die or live on the next frame.
+  checkGameRules = (i, isLive) => {
+    let livePixels = 0;
+    const [width, height] = [this.state.width, this.state.height];
+    const firstPixle = Number.isInteger(i / width);
+    const lastPixle = Number.isInteger((i + 1) / width);
+
+    const checkNeighbours = n => {
+      if (n >= 0 && n < width * height && renderData.has(n)) livePixels++;
+    };
+
+    if (!lastPixle) checkNeighbours(i + 1);
+    if (!firstPixle) checkNeighbours(i - 1);
+    checkNeighbours(i + width);
+    if (!lastPixle) checkNeighbours(i + width + 1);
+    if (!firstPixle) checkNeighbours(i + width - 1);
+    checkNeighbours(i - width);
+    if (!lastPixle) checkNeighbours(i - width + 1);
+    if (!firstPixle) checkNeighbours(i - width - 1);
+
+    if (isLive) {
+      // Any live cell with fewer than two live neighbours dies, as if by underpopulation
+      if (livePixels < 2) {
+        return false;
+        // Any live cell with two or three live neighbours lives on to the next generation.
+      } else if (livePixels === 2 || livePixels === 3) {
+        return true;
+        // Any live cell with more than three live neighbours dies, as if by overpopulation.
+      } else if (livePixels > 3) {
+        return false;
+      }
+      // Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
+    } else if (livePixels === 3) {
+      return true;
+    }
+  };
+  // intiat playin interval
+  play = () => {
+    if (this.state.pixleColor === this.state.backgroundColor) {
+      this.openPopUp('Drawing color and background color should not be the same');
+    } else if (!this.state.isPlaying) {
+      this.setState({ isPlaying: true });
+      if (!this.state.isPaused) this.saveLastPaint();
+
+      renderData = new Set(this.getLivePixels()[0]);
+      interval = setInterval(() => this.renderLifeDeath(), this.state.speed);
+    } else this.pauseRender();
+  };
+  // render frames
+  renderLifeDeath = record => {
+    const width = this.state.width;
+    const height = this.state.height;
+    const toLive = [];
+    const toDeath = [];
+    const foundDead = new Set();
+
+    const checkForDead = n => {
+      if (n >= 0 && n < width * height && !renderData.has(n)) foundDead.add(n);
+    };
+
+    if (record && !renderData) renderData = new Set(this.getLivePixels()[0]);
+
+    renderData.forEach(e => {
+      checkForDead(e + 1);
+      checkForDead(e - 1);
+      checkForDead(e + width);
+      checkForDead(e + width + 1);
+      checkForDead(e + width - 1);
+      checkForDead(e - width);
+      checkForDead(e - width + 1);
+      checkForDead(e - width - 1);
+    });
+
+    renderData.forEach(i => (this.checkGameRules(i, true) ? toLive.push(i) : toDeath.push(i)));
+    foundDead.forEach(i => (this.checkGameRules(i, false) ? toLive.push(i) : toDeath.push(i)));
+
+    for (let i = 0; i < toLive.length; i++) {
+      if (this.state.maintainColorPlay) {
+        const index = lastPaint[0].indexOf(toLive[i]);
+        index !== -1 ? this.toLive(toLive[i], lastPaint[1][index]) : this.toLive(toLive[i]);
+      } else this.toLive(toLive[i]);
+      renderData.add(toLive[i]);
+    }
+
+    for (let i = 0; i < toDeath.length; i++) {
+      renderData.delete(toDeath[i]);
+      this.toDeath(toDeath[i]);
+    }
+  };
+  // pause / stop
+  pauseRender = () => {
+    if (this.state.isPlaying) {
+      clearInterval(interval);
+      this.setState({ isPlaying: false, isPaused: true });
+      renderData = null;
+    }
+  };
+  // check if cnavas drawing color and background color are the same.
+  checkColorsBeforeRender = () =>
+    this.state.pixleColor === this.state.backgroundColor
+      ? this.openPopUp('Drawing color and background color should not be the same')
+      : true;
+  // reset "renderData" global variable.
+  resetRenderData = () => (renderData = null);
+  // --------------------------------------------------------------------------------------------------------------------
+
+  // ----------------------------- windows/controlPanels drag, Mouse tracking, sticky/magnet windows -----------------------------
+  // eraser, foold bucket icons, x,y lines, moves with mouse inside the canvas.
+  trackMouse = l => {
+    const container = document.getElementById('lifeDeathContainer');
+    const eraser = document.getElementById('eraserTrack');
+    const bucket = document.getElementById('bucketTrack');
+    const top = container.getBoundingClientRect().top;
+    const left = container.getBoundingClientRect().left;
+    const y = l.pageY - top - window.scrollY;
+    const x = l.pageX - left - window.scrollX;
+    document.getElementById('MouseHorizenLine').style.top = `${y - 1}px`;
+    document.getElementById('MouseVerticalLine').style.left = `${x - 1}px`;
+    eraser.style.top = `${y - 24}px`;
+    eraser.style.left = `${x + 4}px`;
+    bucket.style.top = `${y - 24}px`;
+    bucket.style.left = `${x - 24}px`;
+  };
+  // stick the controlPanel to another if it's near it.
+  stickyGrapHandle = (l, el) => {
+    const grabEl = document.getElementById(el);
+    const height = parseInt(window.getComputedStyle(grabEl).height);
+    const width = parseInt(window.getComputedStyle(grabEl).width);
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
+    panelsPos.forEach(e => {
+      const recLeft = grabEl.getBoundingClientRect().left + window.scrollX;
+      const recRight = grabEl.getBoundingClientRect().right + window.scrollX;
+      if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY >= e[1] && l.pageY <= e[1] + 20) {
+        grabEl.style.top = `${e[1]}px`;
+        grabEl.style.left = `${e[0]}px`;
+      } else if (l.pageX >= e[0] && l.pageX <= e[2] && l.pageY + height <= e[3] + 20 && l.pageY + height >= e[3]) {
+        grabEl.style.top = `${e[3] - height}px`;
+        grabEl.style.left = `${e[0]}px`;
+      } else if (recLeft >= e[2] - 10 && recLeft <= e[2] + 10) {
+        if (l.pageY >= e[3] && l.pageY <= e[3] + 20) grabEl.style.top = `${e[3]}px`;
+        grabEl.style.left = `${e[2]}px`;
+      } else if (recRight >= e[0] - 10 && recRight <= e[0]) {
+        if (l.pageY >= e[3] && l.pageY <= e[3] + 20) grabEl.style.top = `${e[3]}px`;
+        grabEl.style.left = `${e[0] - width}px`;
+      }
+    });
+  };
+  // set controlPanles left,right,top,bottom values to "panelsPos" global variable, intiated onMouseDown event.
+  findPanelsPos = id => {
+    const panels = [
+      'controlPanel',
+      'gridControlPanel',
+      'colorControlPanel',
+      'saveControlPanel',
+      'moveControlPanel',
+      'colorPlateControlPanel',
+    ];
+    panels.splice(
+      panels.findIndex(e => e === id),
+      1
+    );
+    const pos = panels.map(e => [
+      document.getElementById(e).getBoundingClientRect().left + window.scrollX,
+      document.getElementById(e).getBoundingClientRect().bottom + window.scrollY,
+      document.getElementById(e).getBoundingClientRect().right + window.scrollX,
+      document.getElementById(e).getBoundingClientRect().top + window.scrollY,
+    ]);
+    panelsPos = pos;
+  };
+  // move controlPanles aournd handles with magnet proprties.
+  grabPanel = l => this.stickyGrapHandle(l, 'controlPanel');
+  grabGridPanel = l => this.stickyGrapHandle(l, 'gridControlPanel');
+  grabColorPanel = l => this.stickyGrapHandle(l, 'colorControlPanel');
+  grabSavePanel = l => this.stickyGrapHandle(l, 'saveControlPanel');
+  grabMovePanel = l => this.stickyGrapHandle(l, 'moveControlPanel');
+  grabColorPlate = l => this.stickyGrapHandle(l, 'colorPlateControlPanel');
+  // move window around handles.
+  grabWindowHandel = (l, el) => {
+    l.preventDefault();
+    const grabEl = document.getElementById(el);
+    grabEl.style.top = `${l.pageY < 10 ? 10 : l.pageY + windowTop}px`;
+    grabEl.style.left = `${l.pageX + windowLeft}px`;
+  };
+  grabGrid = l => this.grabWindowHandel(l, 'windowContainer');
+  grabSave = l => this.grabWindowHandel(l, 'saveWindow');
+  grabLoad = l => this.grabWindowHandel(l, 'loadWindow');
+  grabConfirm = l => this.grabWindowHandel(l, 'confirmWindow');
+  // --------------------------------------------------------------------------------------------------------------------
+
+  // ----------------------------- toggle windows open/close handles  -----------------------------
+  toggleWindowHandle = el => {
+    const winEl = document.getElementById(el);
+    const blured = document.getElementById('blured');
+    const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
+    if (isOpen) {
+      requestNum({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
+        winEl.style.transform = `scale(${s})`;
+        blured.style.opacity = s;
+        if (s === 0) {
+          winEl.style.display = 'none';
+          blured.style.display = 'none';
+        }
+      });
+      isWindowOpened = false;
+    } else {
+      winEl.style.display = 'initial';
+      blured.style.display = 'block';
+      requestNum({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
+        winEl.style.transform = `scale(${s})`;
+        blured.style.opacity = s;
+      });
+      isWindowOpened = true;
+    }
+  };
+  toggleConfirmWindow = () => {
+    const winEl = document.getElementById('confirmWindow');
+    const blured = document.getElementById('blured');
+    const isOpen = window.getComputedStyle(winEl).display === 'none' ? false : true;
+    if (isOpen) {
+      requestNum({ from: 1, to: 0, easingFunction: 'easeInCirc', duration: 100 }, s => {
+        winEl.style.transform = `scale(${s})`;
+        blured.style.opacity = s;
+        if (s === 0) {
+          winEl.style.display = 'none';
+          blured.style.display = 'none';
+        }
+      });
+      isWindowOpened = false;
+      document.getElementById('getData').value = '';
+    } else {
+      winEl.style.display = 'initial';
+      blured.style.display = 'block';
+      requestNum({ from: 0, to: 1, easingFunction: 'easeOutQuart', duration: 100 }, s => {
+        winEl.style.transform = `scale(${s})`;
+        blured.style.opacity = s;
+      });
+      isWindowOpened = true;
+    }
+  };
+  toggleSaveWindow = () => this.toggleWindowHandle('saveWindow');
+  toggleLoadWindow = () => {
+    document.querySelectorAll(`.loadCard`).forEach(e => e.removeAttribute('style'));
+    this.setState(() => ({ loadCards: this.renderLoadCards() }));
+    this.toggleWindowHandle('loadWindow');
+  };
+  toggleDownloadWindow = () => this.toggleWindowHandle('downloadWindow');
+  togglePopUp = () => this.toggleWindowHandle('popUp');
+  // change a global variable state wich determain if keyboard shourtcuts should work or not.
+  windowOpen = boolean => (isWindowOpened = boolean);
+  // open a popUp window with a specific text.
+  openPopUp = t => {
+    const textEl = document.getElementById('popUpText');
+    textEl.innerHTML = t;
+    this.togglePopUp();
+  };
+  // --------------------------------------------------------------------------------------------------------------------
+
+  // ----------------------------- Save , load, export, delete -----------------------------
+  // load default painting saves to the localStorage when there is none, initiated in componentDidMount.
+  loadDefaultSaves = () => {
+    const isSavesExist = localStorage.getItem('saved') ? true : false;
+    if (!isSavesExist) {
+      import('./defaultSaves.json').then(res => {
+        const data = JSON.stringify(res.default);
+        localStorage.setItem('saved', data);
+      });
+    }
+  };
+  // save a drawing to localStorage, when save button is pressed inside save window.
+  saveDrawing = () => {
+    this.pauseRender();
+    const buttons = document.querySelectorAll('#saveCancleContainer button');
+    const lives = this.getLivePixels();
+    buttons.forEach(e => (e.disabled = true));
+    const newSave = {
+      livePixels: lives[0],
+      pixelsColors: lives[1],
+      savingName: document.getElementById('saveName').value,
+      drawngImg: '',
+      saveSettings: [this.state.width, this.state.height, this.state.pixelSize, this.state.pxMargin, this.state.backgroundColor],
+    };
+    const dataURL = this.mergeCanvses(false).toDataURL('image/png');
+    newSave.drawngImg = dataURL;
+    if (localStorage.getItem('saved')) {
+      const saved = JSON.parse(localStorage.getItem('saved'));
+      saved.push(newSave);
+      localStorage.setItem('saved', JSON.stringify(saved));
+    } else {
+      localStorage.setItem('saved', JSON.stringify([newSave]));
+    }
+    buttons.forEach(e => (e.disabled = false));
+    this.toggleSaveWindow();
+  };
+  // render saved painting as cards inside load window.
+  renderLoadCards = () =>
+    JSON.parse(localStorage.getItem('saved'))?.map((e, i) => (
+      <LoadCards
+        loadHandle={() => this.loadSaves(i)}
+        removeSaveHandle={e => this.removeSave(e, i)}
+        exportSaveHandle={ev => this.exportSelectedData(ev, i, e.savingName)}
+        img={e.drawngImg}
+        name={e.savingName}
+        Gridwidth={e.saveSettings[0]}
+        Gridheight={e.saveSettings[1]}
+        width={e.saveSettings[0] * (e.saveSettings[3] * 2 + e.saveSettings[2])}
+        height={e.saveSettings[1] * (e.saveSettings[3] * 2 + e.saveSettings[2])}
+        loadsKeys={i}
+        key={i}
+      ></LoadCards>
+    ));
+  // paint saved drawing on the grid when a load card is pressed.
+  loadSaves = i => {
+    this.pauseRender();
+    const saved = JSON.parse(localStorage.getItem('saved'));
+    this.setState(
+      {
+        isPaused: false,
+        width: saved[i].saveSettings[0],
+        height: saved[i].saveSettings[1],
+        pixelSize: saved[i].saveSettings[2],
+        pxMargin: saved[i].saveSettings[3],
+        backgroundColor: saved[i].saveSettings[4],
+      },
+      () => {
+        localStorage.setItem('width', saved[i].saveSettings[0]);
+        localStorage.setItem('height', saved[i].saveSettings[1]);
+        localStorage.setItem('pixelSize', saved[i].saveSettings[2]);
+        localStorage.setItem('pxMargin', saved[i].saveSettings[3]);
+        localStorage.setItem('backgroundColor', saved[i].saveSettings[4]);
+        this.applyPattren(saved[i].livePixels, saved[i].pixelsColors, saved[i].saveSettings[0]);
+        this.saveLastPaint();
+        this.toggleLoadWindow();
+        undo = [];
+        redo = [];
+        this.registerUndo();
+      }
+    );
+  };
+  // delete a specific drawing from localStorage, when delete icon is pressed inside a load card.
+  removeSave = (e, i) => {
+    e.stopPropagation();
+    const saved = JSON.parse(localStorage.getItem('saved'));
+    saved.splice(i, 1);
+    saved.length === 0 ? localStorage.removeItem('saved') : localStorage.setItem('saved', JSON.stringify(saved));
+    saved.length === 0
+      ? (document.getElementById('noLoads').style.display = 'block')
+      : (document.getElementById('noLoads').style.display = 'none');
+    this.setState(() => ({ loadCards: this.renderLoadCards() }));
+  };
+  // downlaod all saved drwaing from localStorage as json file.
+  exportData = () => {
+    const myData = localStorage.getItem('saved');
+    const myblob = new Blob([myData], { type: 'application/json' });
+    saveAs(myblob, 'saved-drawings', { type: 'application/json' });
+  };
+  // download a specific drawing as json file, when the export icon is pressed inside a load card.
+  exportSelectedData = (e, i, name) => {
+    e.stopPropagation();
+    const saved = JSON.parse(localStorage.getItem('saved'));
+    const toExport = JSON.stringify([saved[i]]);
+    const myblob = new Blob([toExport], { type: 'application/json' });
+    saveAs(myblob, name, { type: 'application/json' });
+  };
+  // append imported drawing to exist one on the localStorage, when add is pressed inside confirm window
+  confirmAdd = () => {
+    const LocalData = localStorage.getItem('saved');
+    if (LocalData) {
+      const oldData = JSON.parse(LocalData);
+      const imported = JSON.parse(extractedData);
+      oldData.push(...imported);
+      localStorage.setItem('saved', JSON.stringify(oldData));
+      this.toggleLoadWindow();
+    } else this.openPopUp('Old data not found');
+    this.toggleConfirmWindow();
+  };
+  // replace all saved drawing in localStorage with the imported ones, when replace is pressed inside confrim window.
+  confirmReplace = () => {
+    localStorage.setItem('saved', extractedData);
+    this.toggleConfirmWindow();
+    this.toggleLoadWindow();
+  };
+  // --------------------------------------------------------------------------------------------------------------------
+
+  // ----------------------------- Image layer methods  -----------------------------
+  // drag and drop event listeners, drop an image to open it inside image layer window.
+  dropImage = () => {
+    const preventDefault = e => {
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    // prevent browser on drag default behaviour
+    window.addEventListener('dragenter', preventDefault, false);
+    window.addEventListener('dragexit', preventDefault, false);
+    window.addEventListener('dragover', preventDefault, false);
+
+    window.addEventListener('drop', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      const imgTag = document.getElementById('img');
+      // get droped data
+      const selectedFile = e.dataTransfer.files[0];
+      // check if the data is image
+      if (selectedFile?.type?.includes('image')) {
+        const reader = new FileReader();
+        imgTag.removeAttribute('style');
+        reader.onload = e => {
+          document.getElementById('imageLayer').style.display = 'block';
+          document.getElementById('colorPlateControlPanel').style.display = 'block';
+          imgTag.src = e.target.result;
+          // colors plate
+          extractColors(e.target.result, { saturationImportance: 0, splitPower: 5, distance: 0.1, pixels: 100 })
+            .then(e => {
+              this.setState({ colorPlate: e.map((c, i) => <ColorPlate key={i} color={c.hex} that={this} />) });
+            })
+            .catch(console.log);
+        };
+        reader.readAsDataURL(selectedFile);
+      } else {
+        this.openPopUp('Only Image files are acceptable');
+      }
+    });
+  };
+  // copy colors from image layer pixles to the square underneath it.
   autoFill = () => {
     const img = document.getElementById('img');
     const can = document.getElementById('can');
@@ -1081,7 +1120,7 @@ export default class GameOfLife extends Component {
 
     this.registerUndo();
   };
-
+  // copy a color from image layer pixle to the square underneath it when drawing.
   imageColorPic = e => {
     let color;
     const layer = document.getElementById('imageLayer');
@@ -1105,6 +1144,19 @@ export default class GameOfLife extends Component {
       }
       this.setState({ pixleColor: color });
     }
+  };
+  // --------------------------------------------------------------------------------------------------------------------
+
+  copyToClipBoard = () => {
+    this.pauseRender();
+    this.mergeCanvses(false).toBlob(e => {
+      navigator.permissions.query({ name: 'clipboard-write' }).then(result => {
+        if (result.state === 'granted' || result.state === 'prompt') {
+          // eslint-disable-next-line no-undef
+          navigator.clipboard.write([new ClipboardItem({ 'image/png': e })]);
+        }
+      });
+    }, 'image/png');
   };
 
   RGBToHex = (r, g, b) => {
@@ -1136,13 +1188,6 @@ export default class GameOfLife extends Component {
     ctxTemp.drawImage(hidden, 0, 0);
     return temp;
   };
-
-  windowOpen = boolean => (isWindowOpened = boolean);
-  resetRenderData = () => (renderData = null);
-  checkColorsBeforeRender = () =>
-    this.state.pixleColor === this.state.backgroundColor
-      ? this.openPopUp('Drawing color and background color should not be the same')
-      : true;
 
   render() {
     return (
@@ -2010,7 +2055,10 @@ export default class GameOfLife extends Component {
 
         <ImageWindow></ImageWindow>
 
-        <div id='windowContainer'>
+        <div
+          id='windowContainer'
+          style={{ left: (window.innerWidth - this.state.width * (this.state.pxMargin * 2 + this.state.pixelSize)) / 2 + 'px' }}
+        >
           <div
             id='windowHeader'
             onMouseDown={e => {

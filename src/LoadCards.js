@@ -6,7 +6,10 @@ export default function LoadCards(p) {
       <div className='loadInfos'>
         <p>Name : {p.name}</p>
         <p>
-          Size : {p.width} x {p.height} Grid
+          Size : {p.width} x {p.height} px
+        </p>
+        <p>
+          Grid : {p.Gridwidth} x {p.Gridheight} Square
         </p>
       </div>
       <button className='deleteSave' onClick={p.removeSaveHandle} title='Delete this from saved drawings'>
