@@ -1950,7 +1950,7 @@ export default class GameOfLife extends Component {
           checkColor={this.checkColorsBeforeRender}
           popUp={this.openPopUp}
           windowOpen={this.windowOpen}
-        ></DownloadWindow>
+        />
 
         <div id='saveWindow'>
           <div
@@ -2053,7 +2053,7 @@ export default class GameOfLife extends Component {
           </div>
         </div>
 
-        <ImageWindow></ImageWindow>
+        <ImageWindow/>
 
         <div
           id='windowContainer'
@@ -2155,14 +2155,12 @@ export default class GameOfLife extends Component {
   }
 }
 
-function ColorPlate(props) {
+function ColorPlate({ that, color }) {
   return (
     <button
       className='colorPlateButtons'
-      style={{ backgroundColor: props.color }}
-      onClick={() => {
-        props.that.setState({ pixleColor: props.color });
-      }}
+      style={{ backgroundColor: color }}
+      onClick={() => that.setState({ pixleColor: color })}
     ></button>
   );
 }

@@ -1,8 +1,8 @@
+import React, { Component } from 'react';
 import { createGIF } from 'gifshot';
 import { saveAs } from 'file-saver';
-import React, { Component } from 'react';
-import FFmpeg from '@ffmpeg/ffmpeg';
 import { requestNum } from 'request-animation-number';
+import FFmpeg from '@ffmpeg/ffmpeg';
 import JSZip from 'jszip';
 
 let windowLeft, windowTop, stopLoop;
